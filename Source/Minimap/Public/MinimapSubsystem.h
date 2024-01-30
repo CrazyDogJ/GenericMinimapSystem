@@ -19,10 +19,8 @@ class MINIMAP_API UMinimapSubsystem : public UGameInstanceSubsystem
 	
 public:
 	
-	// 开始子系统
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
-	// 结束子系统
 
 	friend class UMinimapComponent;
 

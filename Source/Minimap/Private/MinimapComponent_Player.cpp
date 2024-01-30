@@ -20,6 +20,8 @@ UMinimapComponent_Player::UMinimapComponent_Player(const FObjectInitializer& Obj
 {
 	bRotate = true;
 	bAlwaysShow = true;
+
+	OwnerPawn = nullptr;
 }
 
 void UMinimapComponent_Player::AddTempPin()
@@ -106,26 +108,20 @@ bool UMinimapComponent_Player::GetHitResultAtScreenPosition(const FVector2D Scre
 	return false;
 }
 
-void UMinimapComponent_Player::OnPossessed_Implementation(APawn* Pawn, AController* OldController,
-	AController* NewController)
-{
-	OnPossessed_Client(Pawn, OldController, NewController);
-}
-
 void UMinimapComponent_Player::BeginPlay()
 {
 	Super::BeginPlay();
-
-	//Bind event on controller possess on pawn(owner), used to check local player and create widget.
-	if (APawn* pawn = Cast<APawn>(GetOwner()))
-	{
-		pawn->ReceiveControllerChangedDelegate.AddDynamic(this, &UMinimapComponent_Player::OnPossessed);
-	}
 	
 	if (GetOwner()->GetLocalRole() == ROLE_Authority)
 	{
 		SetUniqueColorIndex();
 	}
+}
+
+void UMinimapComponent_Player::PostLoad()
+{
+	Super::PostLoad();
+	OwnerPawn = Cast<APawn>(GetOwner());
 }
 
 void UMinimapComponent_Player::SetUniqueColorIndex_Implementation()

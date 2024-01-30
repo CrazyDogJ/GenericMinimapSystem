@@ -4,6 +4,7 @@
 #include "MapCaptureActor.h"
 
 #include "EditorAssetLibrary.h"
+#include "InputBehavior.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "Components/SceneComponent.h"
 #include "MinimapSettings.h"
@@ -99,5 +100,5 @@ void AMapCaptureActor::CaptureMap()
 void AMapCaptureActor::OnConstruction(const FTransform& Transform)
 {
 	EndPoint = FVector(EndPoint.X, EndPoint.X * UKismetMathLibrary::SignOfFloat(EndPoint.Y), 0);
-	Capture2D->SetRelativeLocation(FVector((EndPoint / 2).X, (EndPoint / 2).Y, GetActorLocation().Z));
+	Capture2D->SetWorldLocation(FVector(GetActorLocation().X + 0.5 * EndPoint.X, GetActorLocation().Y + 0.5 * EndPoint.Y, GetActorLocation().Z));
 }

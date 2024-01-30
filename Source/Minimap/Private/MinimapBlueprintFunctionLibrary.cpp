@@ -27,8 +27,12 @@ FMinimapStruct UMinimapBlueprintFunctionLibrary::GetMinimapDataByName(const FStr
             }
         }
     }
-    FMinimapStruct empty;
-    return empty;
+    FMinimapStruct MinimapStruct;
+    MinimapStruct.LevelName = FString();
+    MinimapStruct.MapSize = 0.f;
+    MinimapStruct.MapTexture = nullptr;
+    MinimapStruct.TextureSize = 0.f;
+    return MinimapStruct;
 }
 
 FHitResult UMinimapBlueprintFunctionLibrary::GetHitResultFromScreenPosition(const APlayerController* PlayerController, const FVector2D ScreenPosition)

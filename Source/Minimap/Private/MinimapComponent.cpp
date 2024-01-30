@@ -63,8 +63,6 @@ void UMinimapComponent::BeginPlay()
 		MinimapSubsystem->OnComponentUnregistered.AddDynamic(this, &UMinimapComponent::OnCompUnreg);
 		MinimapSubsystem->RegisterComponent(this);
 	}
-	// ...
-	
 }
 
 

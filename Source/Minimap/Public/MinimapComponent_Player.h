@@ -21,8 +21,10 @@ class MINIMAP_API UMinimapComponent_Player : public UMinimapComponent
 public:
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite)
 	FSlateBrush TempPinBrush;
+
+	UPROPERTY(BlueprintReadOnly)
+	APawn* OwnerPawn;
 	
-public:
 	/**
 	 * Add temp pin at the mid of screen.
 	 */
@@ -44,21 +46,10 @@ public:
 	UFUNCTION(Server, Reliable)
 	void RemoveTempPinExec(AMapPinActor* PinActor);
 
-	/**
-	 * Used to do client side event.
-	 * @param Pawn 
-	 * @param OldController 
-	 * @param NewController 
-	 */
-	UFUNCTION(BlueprintImplementableEvent)
-	void OnPossessed_Client(APawn* Pawn, AController* OldController, AController* NewController);
-
 	bool GetHitResultAtScreenPosition(const FVector2D ScreenPosition, const ECollisionChannel TraceChannel, const FCollisionQueryParams& CollisionQueryParams, FHitResult& HitResult) const;
 	
 protected:
-	//On possess in c++
-	UFUNCTION(Client, Reliable)
-	void OnPossessed(APawn* Pawn, AController* OldController, AController* NewController);
-	
 	virtual void BeginPlay() override;
+
+	virtual void PostLoad() override;
 };
