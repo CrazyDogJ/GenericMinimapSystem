@@ -35,16 +35,22 @@ public:
 	void AddTempPin_MainMap(const FVector2D Location, const FMinimapStruct MapData, const ECollisionChannel TraceChannel);
 
 	UFUNCTION(BlueprintCallable)
-	void RemoveTempPin_MainMap(AMapPinActor* PinActor);
+	void RemoveTempPin_MainMap();
 	
 	UFUNCTION(BlueprintCallable, Server, Reliable)
 	void SetUniqueColorIndex();
-	
+
 	UFUNCTION(Server, Reliable)
 	void AddTempPinExec(FVector Location);
 
 	UFUNCTION(Server, Reliable)
-	void RemoveTempPinExec(AMapPinActor* PinActor);
+	void RemoveTempPinExec();
+
+	UFUNCTION(BlueprintCallable)
+	FMinimapSaveData GetSaveData();
+
+	UFUNCTION(BlueprintCallable)
+	void LoadSaveData(FMinimapSaveData inData);
 
 	bool GetHitResultAtScreenPosition(const FVector2D ScreenPosition, const ECollisionChannel TraceChannel, const FCollisionQueryParams& CollisionQueryParams, FHitResult& HitResult) const;
 	

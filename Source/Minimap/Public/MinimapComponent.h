@@ -9,6 +9,19 @@
 class UMinimapSubsystem;
 class AMapPinActor;
 
+USTRUCT(BlueprintType)
+struct FMinimapSaveData
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(SaveGame, BlueprintReadOnly)
+	bool bHasTempPin = false;
+	
+	UPROPERTY(SaveGame, BlueprintReadOnly)
+	FVector TempPinLocation;
+};
+
 UCLASS(Blueprintable, meta=(BlueprintSpawnableComponent))
 class MINIMAP_API UMinimapComponent : public UActorComponent
 {
@@ -56,5 +69,5 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;	
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 };

@@ -9,6 +9,30 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapComponentEvent, UMinimapComponent*, Component);
 
+USTRUCT(BlueprintType)
+struct FStaticMapPin
+{
+	GENERATED_BODY()
+
+	FStaticMapPin()
+		:Location(FVector::ZeroVector), MapPinBrush(FSlateBrush())
+	{
+	}
+
+	FStaticMapPin(FVector a, FSlateBrush b)
+		:Location(a), MapPinBrush(b)
+	{
+	}
+	
+public:
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	FVector Location;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	FSlateBrush MapPinBrush;
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStaticMapPinEvent, const FStaticMapPin&, StaticMapPin);
 /**
  * 
  */
@@ -32,12 +56,38 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
 	FMinimapComponentEvent OnComponentUnregistered;
 
+	/* Called when static map pin add in the world */
+	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
+	FStaticMapPinEvent OnStaticRegistered;
+
+	/* Called when static map pin removed from the world */
+	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
+	FStaticMapPinEvent OnStaticUnregistered;
+
 	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
 	TArray<UMinimapComponent*> GetRegisteredComponents() const;
+
+	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
+	TArray<FStaticMapPin> GetRegisteredStaticMapPins() const;
+	
+	/**
+	 * Add a static location pin on map.
+	 * @param Location Static location
+	 * @param PinSlateBrush Map pin brush
+	 * @return Id that reference to the static pin
+	 */
+	UFUNCTION(BlueprintCallable, Category=MinimapSubsystem)
+	int AddStaticLocationPin(FVector Location, FSlateBrush PinSlateBrush);
+
+	UFUNCTION(BlueprintCallable, Category=MinimapSubsystem)
+	bool RemoveStaticLocationPin(int Id);
 
 protected:
 	/* All the Minimap Components currently existing in the world */
 	TArray<TWeakObjectPtr<UMinimapComponent>> MinimapComponentRegistry;
+
+	/* All the static map pins in the world*/
+	TArray<FStaticMapPin> StaticMapPins;
 
 protected:
 	virtual void RegisterComponent(UMinimapComponent* Component);

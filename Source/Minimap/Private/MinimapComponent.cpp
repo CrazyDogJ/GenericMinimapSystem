@@ -2,6 +2,8 @@
 
 
 #include "MinimapComponent.h"
+
+#include "MapPinActor.h"
 #include "MinimapSubsystem.h"
 #include "GameFramework/PlayerState.h"
 #include "Net/UnrealNetwork.h"
@@ -10,6 +12,7 @@
 UMinimapComponent::UMinimapComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
+	bAllowAnyoneToDestroyMe = true;
 	PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 
@@ -65,12 +68,12 @@ void UMinimapComponent::BeginPlay()
 	}
 }
 
-
 void UMinimapComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (UMinimapSubsystem* MinimapSubsystem = GetMinimapSubsystem())
 	{
 		MinimapSubsystem->UnregisterComponent(this);
 	}
+	
 	Super::EndPlay(EndPlayReason);
 }

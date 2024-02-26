@@ -3,8 +3,6 @@
 
 #include "MinimapSubsystem.h"
 
-#include "GameFramework/PlayerState.h"
-
 void UMinimapSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 
@@ -29,6 +27,31 @@ TArray<UMinimapComponent*> UMinimapSubsystem::GetRegisteredComponents() const
     return Result;
 }
 
+TArray<FStaticMapPin> UMinimapSubsystem::GetRegisteredStaticMapPins() const
+{
+    return StaticMapPins;
+}
+
+int UMinimapSubsystem::AddStaticLocationPin(FVector Location, FSlateBrush PinSlateBrush)
+{
+    const auto mapPin = FStaticMapPin(Location, PinSlateBrush);
+    const auto result = StaticMapPins.Add(mapPin);
+    OnStaticRegistered.Broadcast(mapPin);
+    return result;
+}
+
+bool UMinimapSubsystem::RemoveStaticLocationPin(int Id)
+{
+    if (StaticMapPins.IsValidIndex(Id))
+    {
+        const auto MapPin = StaticMapPins[Id];
+        StaticMapPins.RemoveAt(Id);
+        OnStaticUnregistered.Broadcast(MapPin);
+        return true;
+    }
+    return false;
+}
+
 void UMinimapSubsystem::RegisterComponent(UMinimapComponent* Component)
 {
     if (Component != nullptr)
@@ -42,7 +65,7 @@ void UMinimapSubsystem::UnregisterComponent(UMinimapComponent* Component)
 {
     if (Component != nullptr)
     {
-        MinimapComponentRegistry.Remove(Component);
         OnComponentUnregistered.Broadcast(Component);
+        MinimapComponentRegistry.Remove(Component);
     }
 }

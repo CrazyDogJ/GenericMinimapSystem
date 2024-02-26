@@ -40,11 +40,11 @@ void UMinimapComponent_Player::AddTempPin()
 		{
 			if (HitResult.GetActor() == TempPin)
 			{
-				RemoveTempPinExec(TempPin);
+				RemoveTempPinExec();
 			}
 			else
 			{
-				RemoveTempPinExec(TempPin);
+				RemoveTempPinExec();
 				AddTempPinExec(HitResult.Location);
 			}
 		}
@@ -70,7 +70,7 @@ void UMinimapComponent_Player::AddTempPin_MainMap(const FVector2D Location, cons
 	//Remove existed pin actor
 	if (TempPin != nullptr)
 	{
-		RemoveTempPinExec(TempPin);
+		RemoveTempPinExec();
 	}
 	
 	//Line trace by channel, channel is visibility
@@ -83,9 +83,9 @@ void UMinimapComponent_Player::AddTempPin_MainMap(const FVector2D Location, cons
 	}
 }
 
-void UMinimapComponent_Player::RemoveTempPin_MainMap(AMapPinActor* PinActor)
+void UMinimapComponent_Player::RemoveTempPin_MainMap()
 {
-	RemoveTempPinExec(PinActor);
+	RemoveTempPinExec();
 }
 
 bool UMinimapComponent_Player::GetHitResultAtScreenPosition(const FVector2D ScreenPosition,
@@ -173,8 +173,31 @@ void UMinimapComponent_Player::AddTempPinExec_Implementation(FVector Location)
 	}
 }
 
-void UMinimapComponent_Player::RemoveTempPinExec_Implementation(AMapPinActor* PinActor)
+void UMinimapComponent_Player::RemoveTempPinExec_Implementation()
 {
-	TempPin->K2_DestroyActor();
-	TempPin = nullptr;
+	if (TempPin)
+	{
+		TempPin->K2_DestroyActor();
+		TempPin = nullptr;
+	}
+}
+
+FMinimapSaveData UMinimapComponent_Player::GetSaveData()
+{
+	FMinimapSaveData OutData;
+	OutData.bHasTempPin = (TempPin != nullptr);
+	if (TempPin)
+	{
+		OutData.TempPinLocation = TempPin->GetActorLocation();
+	}
+	return OutData;
+}
+
+void UMinimapComponent_Player::LoadSaveData(FMinimapSaveData inData)
+{
+	RemoveTempPinExec();
+	if (inData.bHasTempPin)
+	{
+		AddTempPinExec(inData.TempPinLocation);
+	}
 }
