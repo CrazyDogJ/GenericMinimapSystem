@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
-#include "MinimapComponent.h"
 #include "MinimapSubsystem.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapComponentEvent, UMinimapComponent*, Component);
@@ -15,21 +14,24 @@ struct FStaticMapPin
 	GENERATED_BODY()
 
 	FStaticMapPin()
-		:Location(FVector::ZeroVector), MapPinBrush(FSlateBrush())
+		: Location(FVector::ZeroVector), MapPinBrush(FSlateBrush()), bAddToOverlay(false)
 	{
 	}
 
-	FStaticMapPin(FVector a, FSlateBrush b)
-		:Location(a), MapPinBrush(b)
+	FStaticMapPin(FVector a, FSlateBrush b, bool c)
+		: Location(a), MapPinBrush(b), bAddToOverlay(c)
 	{
 	}
-	
+
 public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FVector Location;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FSlateBrush MapPinBrush;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool bAddToOverlay;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStaticMapPinEvent, const FStaticMapPin&, StaticMapPin);
@@ -74,13 +76,14 @@ public:
 	 * Add a static location pin on map.
 	 * @param Location Static location
 	 * @param PinSlateBrush Map pin brush
+	 * @param bAddToOverlay Add to overlay
 	 * @return Id that reference to the static pin
 	 */
 	UFUNCTION(BlueprintCallable, Category=MinimapSubsystem)
-	int AddStaticLocationPin(FVector Location, FSlateBrush PinSlateBrush);
+	void AddStaticLocationPin(FVector Location, FSlateBrush PinSlateBrush, bool bAddToOverlay);
 
 	UFUNCTION(BlueprintCallable, Category=MinimapSubsystem)
-	bool RemoveStaticLocationPin(int Id);
+	void RemoveStaticLocationPin(FVector Location);
 
 protected:
 	/* All the Minimap Components currently existing in the world */

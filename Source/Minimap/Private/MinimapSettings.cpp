@@ -2,9 +2,6 @@
 
 
 #include "MinimapSettings.h"
-#include <Kismet/BlueprintPathsLibrary.h>
-
-#include "AssetViewUtils.h"
 
 UMinimapSettings::UMinimapSettings(const FObjectInitializer& obj)
 {

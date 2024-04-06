@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "MinimapSubsystem.h"
 #include "MinimapComponent.generated.h"
 
 class UMinimapSubsystem;
@@ -35,9 +36,12 @@ public:
 
 	UMinimapSubsystem* GetMinimapSubsystem() const;
 
-	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, meta=(ExposeOnSpawn))
 	FSlateBrush PinSlateBrush;
 
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, meta=(ExposeOnSpawn))
+	bool bAddToOverlay;
+	
 	UPROPERTY(Replicated, BlueprintReadWrite)
 	int32 UniqueColorIndex = -1;
 	
@@ -55,6 +59,12 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnCompUnreg(UMinimapComponent* Component);
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnStaticReg(const FStaticMapPin& StaticMapPin);
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnStaticUnreg(const FStaticMapPin& StaticMapPin);
 	
 //helper functions
 public:

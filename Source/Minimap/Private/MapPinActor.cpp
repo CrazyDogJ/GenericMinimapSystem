@@ -22,7 +22,6 @@ AMapPinActor::AMapPinActor(const FObjectInitializer& ObjectInitializer)
 	SetRootComponent(SceneComponent);
 	MinimapComp = CreateDefaultSubobject<UMinimapComponent>(TEXT("MinimapComponent"));
 	WidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Widget"));
-	WidgetComponent->AttachToComponent(SceneComponent, FAttachmentTransformRules::SnapToTargetIncludingScale);
 	WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
 	WidgetComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	PrimaryActorTick.bCanEverTick = false;

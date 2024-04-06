@@ -32,24 +32,26 @@ TArray<FStaticMapPin> UMinimapSubsystem::GetRegisteredStaticMapPins() const
     return StaticMapPins;
 }
 
-int UMinimapSubsystem::AddStaticLocationPin(FVector Location, FSlateBrush PinSlateBrush)
+void UMinimapSubsystem::AddStaticLocationPin(FVector Location, FSlateBrush PinSlateBrush, bool bAddToOverlay)
 {
-    const auto mapPin = FStaticMapPin(Location, PinSlateBrush);
-    const auto result = StaticMapPins.Add(mapPin);
+    const auto mapPin = FStaticMapPin(Location, PinSlateBrush, bAddToOverlay);
+    StaticMapPins.Add(mapPin);
     OnStaticRegistered.Broadcast(mapPin);
-    return result;
 }
 
-bool UMinimapSubsystem::RemoveStaticLocationPin(int Id)
+void UMinimapSubsystem::RemoveStaticLocationPin(FVector Location)
 {
-    if (StaticMapPins.IsValidIndex(Id))
+    int index = 0;
+    for (const auto pin : StaticMapPins)
     {
-        const auto MapPin = StaticMapPins[Id];
-        StaticMapPins.RemoveAt(Id);
-        OnStaticUnregistered.Broadcast(MapPin);
-        return true;
+        if (pin.Location == Location)
+        {
+            OnStaticUnregistered.Broadcast(pin);
+            StaticMapPins.RemoveAt(index);
+            break;
+        }
+        index++;
     }
-    return false;
 }
 
 void UMinimapSubsystem::RegisterComponent(UMinimapComponent* Component)

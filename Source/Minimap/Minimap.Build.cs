@@ -37,8 +37,9 @@ public class Minimap : ModuleRules
 				"CoreUObject",
 				"Engine",
 				"Slate",
-				"SlateCore", 
-				"EditorScriptingUtilities",
+				"SlateCore",
+				"Settings",
+				//"EditorScriptingUtilities",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

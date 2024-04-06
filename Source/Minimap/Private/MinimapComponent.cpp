@@ -29,6 +29,7 @@ void UMinimapComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(UMinimapComponent, bAlwaysShow);
 	DOREPLIFETIME(UMinimapComponent, TempPin);
 	DOREPLIFETIME(UMinimapComponent, UniqueColorIndex);
+	DOREPLIFETIME(UMinimapComponent, bAddToOverlay);
 }
 
 UMinimapSubsystem* UMinimapComponent::GetMinimapSubsystem() const
@@ -64,6 +65,8 @@ void UMinimapComponent::BeginPlay()
 	{
 		MinimapSubsystem->OnComponentRegistered.AddDynamic(this, &UMinimapComponent::OnCompReg);
 		MinimapSubsystem->OnComponentUnregistered.AddDynamic(this, &UMinimapComponent::OnCompUnreg);
+		MinimapSubsystem->OnStaticRegistered.AddDynamic(this, &UMinimapComponent::OnStaticReg);
+		MinimapSubsystem->OnStaticUnregistered.AddDynamic(this, &UMinimapComponent::OnStaticUnreg);
 		MinimapSubsystem->RegisterComponent(this);
 	}
 }

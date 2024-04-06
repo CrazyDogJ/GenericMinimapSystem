@@ -12,7 +12,7 @@ class UTextureRenderTarget2D;
 class UMinimapSettings;
 
 UCLASS()
-class MINIMAP_API AMapCaptureActor : public AActor
+class MINIMAPEDITOR_API AMapCaptureActor : public AActor
 {
 	GENERATED_BODY()
 
