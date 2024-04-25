@@ -16,9 +16,9 @@ void UMinimapSubsystem::Deinitialize()
 TArray<UMinimapComponent*> UMinimapSubsystem::GetRegisteredComponents() const
 {
     TArray<UMinimapComponent*> Result;
-    for (const TWeakObjectPtr<UMinimapComponent>& comp : MinimapComponentRegistry)
+    for (const TObjectPtr<UMinimapComponent>& comp : MinimapComponentRegistry)
     {
-        if (comp.IsValid())
+        if (comp)
         {
             Result.Add(comp.Get());
         }

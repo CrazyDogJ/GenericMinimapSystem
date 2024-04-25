@@ -87,7 +87,7 @@ public:
 
 protected:
 	/* All the Minimap Components currently existing in the world */
-	TArray<TWeakObjectPtr<UMinimapComponent>> MinimapComponentRegistry;
+	TArray<TObjectPtr<UMinimapComponent>> MinimapComponentRegistry;
 
 	/* All the static map pins in the world*/
 	TArray<FStaticMapPin> StaticMapPins;
