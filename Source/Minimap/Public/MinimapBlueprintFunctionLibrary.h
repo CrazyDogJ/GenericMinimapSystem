@@ -28,4 +28,13 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Minimap")
 	static FLinearColor GetUniqueColorByIndex(const int32 index);
+
+	UFUNCTION(BlueprintPure, Category = "Camera")
+	static bool ProjectWorldToScreenBidirectional(APlayerController const* Player, const FVector& WorldPosition, FVector2D& ScreenPosition, bool& bTargetBehindCamera, bool bPlayerViewportRelative = false);
+
+	UFUNCTION(BlueprintPure, Category = "Widget")
+	static TSubclassOf<UUserWidget> GetMinimapWidgetClass();
+
+	UFUNCTION(BlueprintPure, Category = "Widget")
+	static TSubclassOf<UUserWidget> GetMainmapWidgetClass();
 };

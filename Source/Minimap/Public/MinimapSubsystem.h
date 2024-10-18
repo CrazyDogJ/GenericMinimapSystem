@@ -85,14 +85,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category=MinimapSubsystem)
 	void RemoveStaticLocationPin(FVector Location);
 
+	virtual void RegisterComponent(UMinimapComponent* Component);
+	virtual void UnregisterComponent(UMinimapComponent* Component);
+
 protected:
 	/* All the Minimap Components currently existing in the world */
 	TArray<TObjectPtr<UMinimapComponent>> MinimapComponentRegistry;
 
 	/* All the static map pins in the world*/
 	TArray<FStaticMapPin> StaticMapPins;
-
-protected:
-	virtual void RegisterComponent(UMinimapComponent* Component);
-	virtual void UnregisterComponent(UMinimapComponent* Component);
 };

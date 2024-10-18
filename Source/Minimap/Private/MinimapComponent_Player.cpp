@@ -2,11 +2,13 @@
 
 
 #include "MinimapComponent_Player.h"
+
 #include "MinimapSettings.h"
 #include "MinimapSubsystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "GameFramework/PlayerState.h"
 
 void UMinimapComponent_Player::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -22,6 +24,24 @@ UMinimapComponent_Player::UMinimapComponent_Player(const FObjectInitializer& Obj
 	bAlwaysShow = true;
 
 	OwnerPawn = nullptr;
+}
+
+bool UMinimapComponent_Player::ShouldVisible()
+{
+	const auto OwnedPlayerController = OwnerPawn->GetController();
+	if (OwnedPlayerController == UGameplayStatics::GetPlayerController(GetWorld(), 0))
+	{
+		return true;
+	}
+	
+	auto SelfTeamID = Cast<IGenericTeamAgentInterface>(UGameplayStatics::GetPlayerController(GetWorld(), 0))->GetGenericTeamId();
+	if (!OwnerPawn->GetPlayerState())
+	{
+		return false;
+	}
+	auto CompTeamID = Cast<IGenericTeamAgentInterface>(OwnerPawn->GetPlayerState())->GetGenericTeamId();
+	
+	return SelfTeamID == CompTeamID;
 }
 
 void UMinimapComponent_Player::AddTempPin()

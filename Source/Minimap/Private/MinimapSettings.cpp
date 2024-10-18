@@ -11,3 +11,13 @@ UMinimapSettings::UMinimapSettings(const FObjectInitializer& obj)
     UniqueColors = {FLinearColor::Blue, FLinearColor::Green, FLinearColor::Red, FLinearColor::Yellow};
     ControllerHitResultDistance = 1000000.f;
 }
+
+TSubclassOf<UUserWidget> UMinimapSettings::GetMinimapWidgetClass() const
+{
+    return MiniMapWidgetClass.TryLoadClass<UUserWidget>();
+}
+
+TSubclassOf<UUserWidget> UMinimapSettings::GetMainmapWidgetClass() const
+{
+    return MainMapWidgetClass.TryLoadClass<UUserWidget>();
+}

@@ -21,9 +21,11 @@ AMapPinActor::AMapPinActor(const FObjectInitializer& ObjectInitializer)
 	SceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneComponent);
 	MinimapComp = CreateDefaultSubobject<UMinimapComponent>(TEXT("MinimapComponent"));
-	WidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Widget"));
-	WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
-	WidgetComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	MinimapComp->PinSlateBrush = PinSlateBrush;
+	MinimapComp->bAddToOverlay = true;
+	//WidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Widget"));
+	//WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	//WidgetComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	bReplicates = true;
@@ -42,18 +44,18 @@ void AMapPinActor::Overlapped(UPrimitiveComponent* OverlappedComponent, AActor* 
 void AMapPinActor::BeginPlay()
 {
 	Super::BeginPlay();
-	UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>();
-	Settings->LoadConfig(UMinimapSettings::StaticClass());
-	if (Settings->CommonMapPinWidget->IsValidLowLevel())
-	{
-		if (UMapPinWidget* Widget = CreateWidget<UMapPinWidget>(GetWorld(), Settings->CommonMapPinWidget))
-		{
-			Widget->Brush = PinSlateBrush;
-			Widget->OwnerActor = this;
-			WidgetComponent->SetWidget(Widget);
-			WidgetComponent->RequestRedraw();
-		}
-	}
+	//UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>();
+	//Settings->LoadConfig(UMinimapSettings::StaticClass());
+	//if (Settings->CommonMapPinWidget->IsValidLowLevel())
+	//{
+	//	if (UMapPinWidget* Widget = CreateWidget<UMapPinWidget>(GetWorld(), Settings->CommonMapPinWidget))
+	//	{
+	//		Widget->Brush = PinSlateBrush;
+	//		Widget->OwnerActor = this;
+	//		WidgetComponent->SetWidget(Widget);
+	//		WidgetComponent->RequestRedraw();
+	//	}
+	//}
 	
 	if (bCollision)
 	{
@@ -71,7 +73,7 @@ void AMapPinActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	MinimapComp->DestroyComponent();
 	MinimapComp = nullptr;
-	WidgetComponent->DestroyComponent();
+	//WidgetComponent->DestroyComponent();
 	
 	Super::EndPlay(EndPlayReason);
 }

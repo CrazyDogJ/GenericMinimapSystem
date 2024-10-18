@@ -18,9 +18,6 @@ class MINIMAPEDITOR_API AMapCaptureActor : public AActor
 
 private:
 	UPROPERTY()
-	USceneCaptureComponent2D* Capture2D;
-	
-	UPROPERTY()
 	USceneComponent* SceneComponent;
 	
 	UPROPERTY()
@@ -35,6 +32,9 @@ public:
 	UFUNCTION(CallInEditor)
 	void CaptureMap();
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	USceneCaptureComponent2D* Capture2D;
+	
 	UPROPERTY(EditAnywhere)
 	int32 TextureScale = 2048;
 

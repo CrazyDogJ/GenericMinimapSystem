@@ -38,7 +38,8 @@ public class Minimap : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
-				"Settings",
+				"Settings", 
+				"AIModule",
 				//"EditorScriptingUtilities",
 				// ... add private dependencies that you statically link with here ...	
 			}

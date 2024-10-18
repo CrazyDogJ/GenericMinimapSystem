@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GenericTeamAgentInterface.h"
 #include "MinimapComponent.h"
 #include "MinimapComponent_Player.generated.h"
 
@@ -24,6 +25,9 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	APawn* OwnerPawn;
+
+	UFUNCTION(BlueprintPure)
+	bool ShouldVisible();
 	
 	/**
 	 * Add temp pin at the mid of screen.
