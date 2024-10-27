@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GenericTeamAgentInterface.h"
 #include "MinimapComponent.h"
 #include "MinimapComponent_Player.generated.h"
 
@@ -26,8 +25,20 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	APawn* OwnerPawn;
 
+	UPROPERTY(BlueprintReadOnly)
+	UTextureRenderTarget2D* RT;
+
+	UPROPERTY(EditDefaultsOnly)
+	int Resolution = 1024;
+
+	UPROPERTY(EditDefaultsOnly)
+	UMaterialInterface* MaskLoadMaterial;
+
+	UPROPERTY(EditDefaultsOnly)
+	FName TexturePropertyName = FName("RT");
+	
 	UFUNCTION(BlueprintPure)
-	bool ShouldVisible();
+	bool ShouldVisible() const;
 	
 	/**
 	 * Add temp pin at the mid of screen.
@@ -52,9 +63,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FMinimapSaveData GetSaveData();
-
+	
 	UFUNCTION(BlueprintCallable)
-	void LoadSaveData(FMinimapSaveData inData);
+	void LoadSaveData(FMinimapSaveData inData, UTexture2D* MapMaskData);
 
 	bool GetHitResultAtScreenPosition(const FVector2D ScreenPosition, const ECollisionChannel TraceChannel, const FCollisionQueryParams& CollisionQueryParams, FHitResult& HitResult) const;
 	

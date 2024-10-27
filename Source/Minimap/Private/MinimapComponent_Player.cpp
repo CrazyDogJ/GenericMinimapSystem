@@ -3,12 +3,16 @@
 
 #include "MinimapComponent_Player.h"
 
+#include "GenericTeamAgentInterface.h"
 #include "MinimapSettings.h"
 #include "MinimapSubsystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
+#include "Engine/Canvas.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerState.h"
+#include "Kismet/KismetMaterialLibrary.h"
+#include "Kismet/KismetRenderingLibrary.h"
 
 void UMinimapComponent_Player::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -26,7 +30,7 @@ UMinimapComponent_Player::UMinimapComponent_Player(const FObjectInitializer& Obj
 	OwnerPawn = nullptr;
 }
 
-bool UMinimapComponent_Player::ShouldVisible()
+bool UMinimapComponent_Player::ShouldVisible() const
 {
 	const auto OwnedPlayerController = OwnerPawn->GetController();
 	if (OwnedPlayerController == UGameplayStatics::GetPlayerController(GetWorld(), 0))
@@ -136,6 +140,8 @@ void UMinimapComponent_Player::BeginPlay()
 	{
 		SetUniqueColorIndex();
 	}
+
+	RT = UKismetRenderingLibrary::CreateRenderTarget2D(GetWorld(), Resolution, Resolution, RTF_RGBA16f, FLinearColor::Black, false, false);
 }
 
 void UMinimapComponent_Player::PostLoad()
@@ -206,18 +212,30 @@ FMinimapSaveData UMinimapComponent_Player::GetSaveData()
 {
 	FMinimapSaveData OutData;
 	OutData.bHasTempPin = (TempPin != nullptr);
-	if (TempPin)
+	if (TempPin != nullptr)
 	{
 		OutData.TempPinLocation = TempPin->GetActorLocation();
 	}
 	return OutData;
 }
 
-void UMinimapComponent_Player::LoadSaveData(FMinimapSaveData inData)
+void UMinimapComponent_Player::LoadSaveData(FMinimapSaveData inData, UTexture2D* MapMaskData)
 {
 	RemoveTempPinExec();
 	if (inData.bHasTempPin)
 	{
 		AddTempPinExec(inData.TempPinLocation);
+	}
+	if (RT)
+	{
+		UKismetRenderingLibrary::ClearRenderTarget2D(GetWorld(), RT, FLinearColor::Black);
+		UCanvas* Canvas = nullptr;
+		FVector2D Size;
+		FDrawToRenderTargetContext Context;
+		UKismetRenderingLibrary::BeginDrawCanvasToRenderTarget(GetWorld(), RT, Canvas, Size, Context);
+		auto BrushMaterial = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), MaskLoadMaterial);
+		BrushMaterial->SetTextureParameterValue(TexturePropertyName, MapMaskData);
+		Canvas->K2_DrawMaterial(BrushMaterial, FVector2D(0,0), FVector2D(Resolution, Resolution), FVector2D(0,0));
+		UKismetRenderingLibrary::EndDrawCanvasToRenderTarget(GetWorld(), Context);
 	}
 }
