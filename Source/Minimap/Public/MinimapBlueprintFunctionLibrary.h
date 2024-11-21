@@ -18,10 +18,10 @@ class MINIMAP_API UMinimapBlueprintFunctionLibrary : public UBlueprintFunctionLi
 	
 public:
 	UFUNCTION(BlueprintPure, Category = "Minimap")
-	static TArray<FMinimapStruct> GetMinimapDatas();
+	static TMap<FString, TSoftObjectPtr<UMinimapMapData>> GetMinimapDatas();
 
 	UFUNCTION(BlueprintPure, Category = "Minimap")
-	static FMinimapStruct GetMinimapDataByName(const FString& LevelName);
+	static TSoftObjectPtr<UMinimapMapData> GetMinimapDataByName(const FString& LevelName);
 
 	UFUNCTION(BlueprintCallable, Category = "Minimap")
 	static FHitResult GetHitResultFromScreenPosition(const APlayerController* PlayerController, const FVector2D ScreenPosition);

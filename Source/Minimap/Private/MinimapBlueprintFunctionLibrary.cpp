@@ -4,35 +4,23 @@
 #include "MinimapBlueprintFunctionLibrary.h"
 #include "GameFramework/PlayerController.h"
 
-TArray<FMinimapStruct> UMinimapBlueprintFunctionLibrary::GetMinimapDatas()
+TMap<FString, TSoftObjectPtr<UMinimapMapData>> UMinimapBlueprintFunctionLibrary::GetMinimapDatas()
 {
     if (UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>())
     {
-        return Settings->MapsData;
+        return Settings->MapsInfos;
     }
-    TArray<FMinimapStruct> empty;
-    return empty;
+    TMap<FString, TSoftObjectPtr<UMinimapMapData>> Empty;
+    return Empty;
 }
 
-FMinimapStruct UMinimapBlueprintFunctionLibrary::GetMinimapDataByName(const FString& LevelName)
+TSoftObjectPtr<UMinimapMapData> UMinimapBlueprintFunctionLibrary::GetMinimapDataByName(const FString& LevelName)
 {
-    if (!LevelName.IsEmpty())
+    if (GetMinimapDatas().Find(LevelName))
     {
-        const TArray<FMinimapStruct> datas = GetMinimapDatas();
-        for (auto data : datas)
-        {
-            if (data.LevelName == LevelName)
-            {
-                return data;
-            }
-        }
+        return GetMinimapDatas().Find(LevelName)->Get();
     }
-    FMinimapStruct MinimapStruct;
-    MinimapStruct.LevelName = FString();
-    MinimapStruct.MapSize = 0.f;
-    MinimapStruct.MapTexture = nullptr;
-    MinimapStruct.TextureSize = 0.f;
-    return MinimapStruct;
+    return nullptr;
 }
 
 FHitResult UMinimapBlueprintFunctionLibrary::GetHitResultFromScreenPosition(const APlayerController* PlayerController, const FVector2D ScreenPosition)

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MinimapMapData.h"
 #include "GameFramework/Actor.h"
 #include "MapCaptureActor.generated.h"
 
@@ -22,9 +23,6 @@ private:
 	
 	UPROPERTY()
 	UTextureRenderTarget2D* RenderTarget;
-
-	UFUNCTION()
-	static int32 HasConfig(UMinimapSettings* Settings, const FString& LevelName);
 public:	
 	// Sets default values for this actor's properties
 	AMapCaptureActor(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
@@ -32,6 +30,10 @@ public:
 	UFUNCTION(CallInEditor)
 	void CaptureMap();
 
+	void SaveMapInfo(UMinimapMapData* NewDataAsset, const FString& Path, const FString& Name);
+
+	void WriteMapInfo(UMinimapMapData* DataAsset, UTexture2D* Tex);
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	USceneCaptureComponent2D* Capture2D;
 	

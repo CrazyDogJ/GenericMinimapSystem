@@ -40,6 +40,7 @@ public class Minimap : ModuleRules
 				"SlateCore",
 				"Settings", 
 				"AIModule",
+				"GameplayTags"
 				//"EditorScriptingUtilities",
 				// ... add private dependencies that you statically link with here ...	
 			}

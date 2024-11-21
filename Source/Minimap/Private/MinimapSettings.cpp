@@ -5,8 +5,6 @@
 
 UMinimapSettings::UMinimapSettings(const FObjectInitializer& obj)
 {
-    TArray<FMinimapStruct> emptyData;
-    MapsData = emptyData;
     MapTexturePath = TEXT("/Game/MapTextures/");
     UniqueColors = {FLinearColor::Blue, FLinearColor::Green, FLinearColor::Red, FLinearColor::Yellow};
     ControllerHitResultDistance = 1000000.f;

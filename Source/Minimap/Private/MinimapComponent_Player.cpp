@@ -28,6 +28,8 @@ UMinimapComponent_Player::UMinimapComponent_Player(const FObjectInitializer& Obj
 	bAlwaysShow = true;
 
 	OwnerPawn = nullptr;
+	RT = nullptr;
+	MaskLoadMaterial = nullptr;
 }
 
 bool UMinimapComponent_Player::ShouldVisible() const
@@ -75,13 +77,13 @@ void UMinimapComponent_Player::AddTempPin()
 	}
 }
 
-void UMinimapComponent_Player::AddTempPin_MainMap(const FVector2D Location, const FMinimapStruct MapData, const ECollisionChannel TraceChannel)
+void UMinimapComponent_Player::AddTempPin_MainMap(const FVector2D Location, const UMinimapMapData* MapData, const ECollisionChannel TraceChannel)
 {
 	//Set map highest point, used to be the z location of the map capture actor.
 	float MapHighestPoint = 100000.f;
-	if (MapData.IsValid())
+	if (MapData)
 	{
-		MapHighestPoint = MapData.CaptureActorLocation.Z;
+		MapHighestPoint = MapData->CaptureActorLocation.Z;
 	}
 
 	//Get setting

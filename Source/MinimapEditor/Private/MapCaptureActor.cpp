@@ -4,31 +4,15 @@
 #include "MapCaptureActor.h"
 
 #include "EditorAssetLibrary.h"
-#include "InputBehavior.h"
+#include "MapHotPointActor.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "Components/SceneComponent.h"
 #include "MinimapSettings.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
-
-int32 AMapCaptureActor::HasConfig(UMinimapSettings* Settings, const FString& LevelName)
-{
-	if (Settings)
-	{
-		int32 id=0;
-		for (auto setting : Settings->MapsData)
-		{
-			if (setting.LevelName == LevelName)
-			{
-				return id;
-			}
-			id++;
-		}
-	}
-	
-	return -1;
-}
+#include "UObject/SavePackage.h"
 
 // Sets default values
 AMapCaptureActor::AMapCaptureActor(const FObjectInitializer& ObjectInitializer)
@@ -74,27 +58,77 @@ void AMapCaptureActor::CaptureMap()
 	}
 	
 	UTexture2D* tex = UKismetRenderingLibrary::RenderTargetCreateStaticTexture2DEditorOnly(RenderTarget, TotalFileName);
-
-	FMinimapStruct structToAdd;
-	structToAdd.LevelName = GetWorld()->GetMapName();
-	structToAdd.MapSize = EndPoint.X;
-	structToAdd.TextureSize = TextureScale;
-	structToAdd.CaptureActorLocation = GetActorLocation();
-	structToAdd.MapTexture = tex;
-
-	Settings->LoadConfig(UMinimapSettings::StaticClass(), *Settings->GetDefaultConfigFilename());
-	int32 foundIndex = HasConfig(Settings, GetWorld()->GetMapName());
-	if (foundIndex >= 0 && foundIndex < Settings->MapsData.Num())
+	
+	if (auto Value = Settings->MapsInfos.Find(GetWorld()->GetMapName()))
 	{
-		Settings->MapsData[foundIndex] = structToAdd;
+		if (UMinimapMapData* MapData = Value->LoadSynchronous())
+		{
+			WriteMapInfo(MapData, tex);
+			MapData->MarkPackageDirty();
+		}
 	}
 	else
 	{
-		Settings->MapsData.Add(structToAdd);
-	}
+		Settings->LoadConfig(UMinimapSettings::StaticClass(), *Settings->GetDefaultConfigFilename());
+		FString AssetPath = Settings->MapTexturePath + "DA_" + GetWorld()->GetMapName();
+		FString AssetName = "DA_" + GetWorld()->GetMapName();
+		UPackage* Package = CreatePackage(*AssetPath);
+		UMinimapMapData* NewMapInfo = NewObject<UMinimapMapData>(Package, *AssetName, RF_Public | RF_Standalone);
+		if (NewMapInfo)
+		{
+			WriteMapInfo(NewMapInfo, tex);
+		}
+		// save mapper class
+		FString const PackageName = Package->GetName();
+		FString const PackageFileName = FPackageName::LongPackageNameToFilename(PackageName, FPackageName::GetAssetPackageExtension());
 
-	Settings->SaveConfig(CPF_Config, *Settings->GetDefaultConfigFilename());
+		FSavePackageArgs SaveArgs;
+		SaveArgs.TopLevelFlags = RF_Standalone;
+		SaveArgs.SaveFlags = SAVE_NoError;
+		UPackage::SavePackage(Package, NULL, *PackageFileName, SaveArgs);
+		
+		TSoftObjectPtr<UMinimapMapData> SoftRef(AssetPath + "." + AssetName);
+		Settings->MapsInfos.Add(GetWorld()->GetMapName(), SoftRef);
+		Settings->SaveConfig(CPF_Config, *Settings->GetDefaultConfigFilename());
+	}
 #endif  
+}
+
+void AMapCaptureActor::SaveMapInfo(UMinimapMapData* NewDataAsset, const FString& Path, const FString& Name)
+{
+	if (NewDataAsset)
+	{
+		if (UPackage* Package = CreatePackage(*Path))
+		{
+			NewDataAsset->Rename(*Name, Package);
+
+			FAssetRegistryModule::AssetCreated(NewDataAsset);
+			FString PackageFilePath = FPackageName::LongPackageNameToFilename(Path, FPackageName::GetAssetPackageExtension());
+			FSavePackageArgs SaveArgs;
+			SaveArgs.TopLevelFlags = RF_Standalone;
+			UPackage::SavePackage(Package, NewDataAsset, *PackageFilePath, SaveArgs);
+
+			//UE_LOG(LogTemp, Log, TEXT("Data Asset created and saved successfully at: %s"), *Path);
+		}
+	}
+}
+
+void AMapCaptureActor::WriteMapInfo(UMinimapMapData* DataAsset, UTexture2D* Tex)
+{
+	DataAsset->MapSize = EndPoint.X;
+	DataAsset->MapTexture = Tex;
+	DataAsset->TextureSize = TextureScale;
+	DataAsset->CaptureActorLocation = GetActorLocation();
+	DataAsset->HotPointInfos.Empty();
+	TArray<AActor*> OutActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMapHotPointActor::StaticClass(), OutActors);
+	for (auto Actor : OutActors)
+	{
+		if (auto Point = Cast<AMapHotPointActor>(Actor))
+		{
+			DataAsset->HotPointInfos.Add(Point->Info);
+		}
+	}
 }
 
 void AMapCaptureActor::OnConstruction(const FTransform& Transform)

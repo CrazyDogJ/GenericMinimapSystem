@@ -3,9 +3,7 @@
 
 #include "MapPinActor.h"
 
-#include "MapPinWidget.h"
 #include "MinimapComponent.h"
-#include "MinimapSettings.h"
 #include "Net/UnrealNetwork.h"
 
 void AMapPinActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

@@ -4,8 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "MapPinWidget.h"
-#include "UObject/NoExportTypes.h"
-#include "MinimapStructs.h"
+#include "MinimapMapData.h"
 #include "MinimapSettings.generated.h"
 
 /**
@@ -23,7 +22,7 @@ public:
 	 * May have problem in case that different levels have same name!
 	 */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Minimap Settings")
-	TArray<FMinimapStruct> MapsData;
+	TMap<FString, TSoftObjectPtr<UMinimapMapData>> MapsInfos;
 
 	/** Where to store map textures. */
 	UPROPERTY(Config, EditAnywhere, Category = "Minimap Settings")

@@ -3,7 +3,6 @@
 
 #include "MinimapComponent.h"
 
-#include "MapPinActor.h"
 #include "MinimapSubsystem.h"
 #include "GameFramework/PlayerState.h"
 #include "Net/UnrealNetwork.h"

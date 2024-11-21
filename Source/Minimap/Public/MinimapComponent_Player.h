@@ -47,7 +47,7 @@ public:
 	void AddTempPin();
 
 	UFUNCTION(BlueprintCallable)
-	void AddTempPin_MainMap(const FVector2D Location, const FMinimapStruct MapData, const ECollisionChannel TraceChannel);
+	void AddTempPin_MainMap(const FVector2D Location, const UMinimapMapData* MapData, const ECollisionChannel TraceChannel);
 
 	UFUNCTION(BlueprintCallable)
 	void RemoveTempPin_MainMap();

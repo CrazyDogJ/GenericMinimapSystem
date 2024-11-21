@@ -9,7 +9,7 @@ public class MinimapEditor : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core",
+                "Core"
             }
         );
 
@@ -19,7 +19,9 @@ public class MinimapEditor : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore", "EditorScriptingUtilities", "Minimap"
+                "SlateCore", 
+                "EditorScriptingUtilities", 
+                "Minimap"
             }
         );
     }
