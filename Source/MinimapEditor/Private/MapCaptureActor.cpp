@@ -28,6 +28,8 @@ AMapCaptureActor::AMapCaptureActor(const FObjectInitializer& ObjectInitializer)
 	Capture2D->bCaptureEveryFrame = false;
 	Capture2D->bCaptureOnMovement = false;
 	bIsEditorOnlyActor = true;
+	SceneComponent->bIsEditorOnly = true;
+	Capture2D->bIsEditorOnly = true;
 }
 
 void AMapCaptureActor::CaptureMap()
