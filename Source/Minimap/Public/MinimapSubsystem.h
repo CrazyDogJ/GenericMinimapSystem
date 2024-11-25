@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MinimapMapData.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "MinimapSubsystem.generated.h"
 
@@ -66,6 +67,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
 	FStaticMapPinEvent OnStaticUnregistered;
 
+	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem")
+	UMinimapMapData* CurrentMinimapMapData;
+	
 	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
 	TArray<UMinimapComponent*> GetRegisteredComponents() const;
 
@@ -84,6 +88,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category=MinimapSubsystem)
 	void RemoveStaticLocationPin(FVector Location);
+
+	UFUNCTION(BlueprintCallable, Category=MinimapSubsystem)
+	UMinimapMapData* GetCurrentMinimapMapData();
 
 	virtual void RegisterComponent(UMinimapComponent* Component);
 	virtual void UnregisterComponent(UMinimapComponent* Component);

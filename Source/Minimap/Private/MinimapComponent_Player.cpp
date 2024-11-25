@@ -218,6 +218,7 @@ FMinimapSaveData UMinimapComponent_Player::GetSaveData()
 	{
 		OutData.TempPinLocation = TempPin->GetActorLocation();
 	}
+	OutData.HotPointSaveGames = HotPointSaveGames;
 	return OutData;
 }
 
@@ -228,6 +229,7 @@ void UMinimapComponent_Player::LoadSaveData(FMinimapSaveData inData, UTexture2D*
 	{
 		AddTempPinExec(inData.TempPinLocation);
 	}
+	HotPointSaveGames = inData.HotPointSaveGames;
 	if (RT)
 	{
 		UKismetRenderingLibrary::ClearRenderTarget2D(GetWorld(), RT, FLinearColor::Black);
@@ -240,4 +242,22 @@ void UMinimapComponent_Player::LoadSaveData(FMinimapSaveData inData, UTexture2D*
 		Canvas->K2_DrawMaterial(BrushMaterial, FVector2D(0,0), FVector2D(Resolution, Resolution), FVector2D(0,0));
 		UKismetRenderingLibrary::EndDrawCanvasToRenderTarget(GetWorld(), Context);
 	}
+}
+
+bool UMinimapComponent_Player::IsHotPointFound(FHotPointInfo HotPointInfo)
+{
+	FHotPointSaveGame* FoundStruct = HotPointSaveGames.FindByPredicate([&](const FHotPointSaveGame& Item)
+	{
+		return Item.LevelName == UGameplayStatics::GetCurrentLevelName(GetWorld());
+	});
+
+	if (FoundStruct)
+	{
+		if (const auto Ptr = FoundStruct->HotPointFoundMap.Find(HotPointInfo.HotPointUniqueID))
+		{
+			return *Ptr;
+		}
+	}
+	
+	return false;
 }

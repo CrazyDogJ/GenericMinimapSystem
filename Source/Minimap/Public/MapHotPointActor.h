@@ -3,12 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MinimapComponent_Player.h"
 #include "MinimapMapData.h"
 #include "GameFramework/Actor.h"
 #include "MapHotPointActor.generated.h"
 
-UCLASS()
-class MINIMAPEDITOR_API AMapHotPointActor : public AActor
+UCLASS(Blueprintable)
+class MINIMAP_API AMapHotPointActor : public AActor
 {
 	GENERATED_BODY()
 
@@ -17,7 +18,12 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, EditAnywhere)
 	FHotPointInfo Info;
+
+	UFUNCTION(BlueprintCallable)
+	void FoundThisMapHotPoint(UMinimapComponent_Player* Player);
 	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	USceneComponent* Root;
 #if WITH_EDITORONLY_DATA
 	UPROPERTY()
 	UTexture2D* DefaultTexture;

@@ -3,7 +3,9 @@
 
 #include "MapPinActor.h"
 
+#include "MinimapBlueprintFunctionLibrary.h"
 #include "MinimapComponent.h"
+#include "MinimapSettings.h"
 #include "Net/UnrealNetwork.h"
 
 void AMapPinActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -21,9 +23,10 @@ AMapPinActor::AMapPinActor(const FObjectInitializer& ObjectInitializer)
 	MinimapComp = CreateDefaultSubobject<UMinimapComponent>(TEXT("MinimapComponent"));
 	MinimapComp->PinSlateBrush = PinSlateBrush;
 	MinimapComp->bAddToOverlay = true;
-	//WidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Widget"));
-	//WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
-	//WidgetComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	WidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Widget"));
+	WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	WidgetComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	WidgetComponent->SetupAttachment(SceneComponent);
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	bReplicates = true;
@@ -42,18 +45,17 @@ void AMapPinActor::Overlapped(UPrimitiveComponent* OverlappedComponent, AActor* 
 void AMapPinActor::BeginPlay()
 {
 	Super::BeginPlay();
-	//UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>();
-	//Settings->LoadConfig(UMinimapSettings::StaticClass());
-	//if (Settings->CommonMapPinWidget->IsValidLowLevel())
-	//{
-	//	if (UMapPinWidget* Widget = CreateWidget<UMapPinWidget>(GetWorld(), Settings->CommonMapPinWidget))
-	//	{
-	//		Widget->Brush = PinSlateBrush;
-	//		Widget->OwnerActor = this;
-	//		WidgetComponent->SetWidget(Widget);
-	//		WidgetComponent->RequestRedraw();
-	//	}
-	//}
+
+	if (auto Class = UMinimapBlueprintFunctionLibrary::GetMapPinWidgetClass())
+	{
+		if (UMapPinWidget* Widget = CreateWidget<UMapPinWidget>(GetWorld(), Class))
+		{
+			Widget->Brush = PinSlateBrush;
+			Widget->OwnerActor = this;
+			WidgetComponent->SetWidget(Widget);
+			WidgetComponent->RequestRedraw();
+		}
+	}
 	
 	if (bCollision)
 	{

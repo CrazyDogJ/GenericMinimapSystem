@@ -3,6 +3,9 @@
 
 #include "MinimapBlueprintFunctionLibrary.h"
 #include "GameFramework/PlayerController.h"
+#include "WorldPartition/WorldPartition.h"
+#include "WorldPartition/WorldPartitionRuntimeHash.h"
+#include "WorldPartition/WorldPartitionSubsystem.h"
 
 TMap<FString, TSoftObjectPtr<UMinimapMapData>> UMinimapBlueprintFunctionLibrary::GetMinimapDatas()
 {
@@ -105,4 +108,53 @@ TSubclassOf<UUserWidget> UMinimapBlueprintFunctionLibrary::GetMainmapWidgetClass
         return Settings->GetMainmapWidgetClass();
     }
     return nullptr;
+}
+
+TSubclassOf<UMapPinWidget> UMinimapBlueprintFunctionLibrary::GetMapPinWidgetClass()
+{
+    if (UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>())
+    {
+        return Settings->GetCommonMapPinWidgetClass();
+    }
+    return nullptr;
+}
+
+bool UMinimapBlueprintFunctionLibrary::GetCurrentWorldPartitionLevelName(const UObject* WorldContext, FVector Location, FString& LevelName)
+{
+    if (!WorldContext)
+    {
+        return false;
+    }
+    
+    const auto WorldPartitionSubsystem = WorldContext->GetWorld()->GetSubsystem<UWorldPartitionSubsystem>();
+    if (!WorldPartitionSubsystem)
+    {
+        return false;
+    }
+
+    bool bResult = false;
+    
+    const auto ForEachCellFunction = [&Location, &LevelName, &bResult](const UWorldPartitionRuntimeCell* Cell) -> bool
+    {
+        if (Cell->GetCellBounds().IsInsideXY(Location))
+        {
+            LevelName = Cell->GetName();
+            bResult = true;
+        }
+        return true;
+    };
+
+    // ReSharper disable once CppParameterMayBeConstPtrOrRef
+    auto ForEachWpFunction = [ForEachCellFunction](UWorldPartition* WorldPartition) -> bool
+    {
+        if (WorldPartition)
+        {
+            WorldPartition->RuntimeHash->ForEachStreamingCells(ForEachCellFunction);
+        }
+        return true;
+    };
+
+    WorldPartitionSubsystem->ForEachWorldPartition(ForEachWpFunction);
+
+    return bResult;
 }

@@ -31,8 +31,8 @@ public:
 	/** Widget class on map pin actor.
 	 * Widget in plugin content folder by default.
 	 */
-	UPROPERTY(Config, EditAnywhere, Category = "Minimap Settings")
-	TSubclassOf<UMapPinWidget> CommonMapPinWidget;
+	UPROPERTY(Config, EditAnywhere, meta = (MetaClass = "/Script/Minimap.MapPinWidget"), AdvancedDisplay, Category = "Minimap Settings")
+	FSoftClassPath CommonMapPinWidget;
 
 	/** Unique color for multiplayer
 	 * if not found, it will be purple.
@@ -57,4 +57,6 @@ public:
 
 	/** Get main map widget class */
 	TSubclassOf<UUserWidget> GetMainmapWidgetClass() const;
+
+	TSubclassOf<UMapPinWidget> GetCommonMapPinWidgetClass() const;
 };

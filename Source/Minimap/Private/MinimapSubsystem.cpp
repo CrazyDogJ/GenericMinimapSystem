@@ -3,6 +3,9 @@
 
 #include "MinimapSubsystem.h"
 
+#include "MinimapSettings.h"
+#include "Kismet/GameplayStatics.h"
+
 void UMinimapSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 
@@ -52,6 +55,26 @@ void UMinimapSubsystem::RemoveStaticLocationPin(FVector Location)
         }
         index++;
     }
+}
+
+UMinimapMapData* UMinimapSubsystem::GetCurrentMinimapMapData()
+{
+    if (CurrentMinimapMapData)
+    {
+        if (CurrentMinimapMapData->LevelName == UGameplayStatics::GetCurrentLevelName(GetWorld()))
+        {
+            return CurrentMinimapMapData;
+        }
+    }
+    
+    UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>();
+    if (auto Value = Settings->MapsInfos.Find(UGameplayStatics::GetCurrentLevelName(GetWorld())))
+    {
+        CurrentMinimapMapData = Value->LoadSynchronous();
+        return CurrentMinimapMapData;
+    }
+    
+    return nullptr;
 }
 
 void UMinimapSubsystem::RegisterComponent(UMinimapComponent* Component)

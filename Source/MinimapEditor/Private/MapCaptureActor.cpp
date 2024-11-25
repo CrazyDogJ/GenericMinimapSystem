@@ -37,7 +37,7 @@ void AMapCaptureActor::CaptureMap()
 	RenderTarget = UKismetRenderingLibrary::CreateRenderTarget2D(GetWorld(), TextureScale, TextureScale);
 	Capture2D->TextureTarget = RenderTarget;
 	Capture2D->CaptureScene();
-	FString texName = FString(TEXT("T_")) + GetWorld()->GetMapName();
+	FString texName = FString(TEXT("T_")) + UGameplayStatics::GetCurrentLevelName(GetWorld());
 	UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>();
 	FString TotalFileName = FPaths::Combine(Settings->MapTexturePath, texName);
 	
@@ -59,7 +59,7 @@ void AMapCaptureActor::CaptureMap()
 	
 	UTexture2D* tex = UKismetRenderingLibrary::RenderTargetCreateStaticTexture2DEditorOnly(RenderTarget, TotalFileName);
 	
-	if (auto Value = Settings->MapsInfos.Find(GetWorld()->GetMapName()))
+	if (auto Value = Settings->MapsInfos.Find(UGameplayStatics::GetCurrentLevelName(GetWorld())))
 	{
 		if (UMinimapMapData* MapData = Value->LoadSynchronous())
 		{
@@ -70,11 +70,10 @@ void AMapCaptureActor::CaptureMap()
 	else
 	{
 		Settings->LoadConfig(UMinimapSettings::StaticClass(), *Settings->GetDefaultConfigFilename());
-		FString AssetPath = Settings->MapTexturePath + "DA_" + GetWorld()->GetMapName();
-		FString AssetName = "DA_" + GetWorld()->GetMapName();
+		FString AssetPath = Settings->MapTexturePath + "DA_" + UGameplayStatics::GetCurrentLevelName(GetWorld());
+		FString AssetName = "DA_" + UGameplayStatics::GetCurrentLevelName(GetWorld());
 		UPackage* Package = CreatePackage(*AssetPath);
-		UMinimapMapData* NewMapInfo = NewObject<UMinimapMapData>(Package, *AssetName, RF_Public | RF_Standalone);
-		if (NewMapInfo)
+		if (UMinimapMapData* NewMapInfo = NewObject<UMinimapMapData>(Package, *AssetName, RF_Public | RF_Standalone))
 		{
 			WriteMapInfo(NewMapInfo, tex);
 		}
@@ -85,10 +84,10 @@ void AMapCaptureActor::CaptureMap()
 		FSavePackageArgs SaveArgs;
 		SaveArgs.TopLevelFlags = RF_Standalone;
 		SaveArgs.SaveFlags = SAVE_NoError;
-		UPackage::SavePackage(Package, NULL, *PackageFileName, SaveArgs);
+		UPackage::SavePackage(Package, nullptr, *PackageFileName, SaveArgs);
 		
 		TSoftObjectPtr<UMinimapMapData> SoftRef(AssetPath + "." + AssetName);
-		Settings->MapsInfos.Add(GetWorld()->GetMapName(), SoftRef);
+		Settings->MapsInfos.Add(UGameplayStatics::GetCurrentLevelName(GetWorld()), SoftRef);
 		Settings->SaveConfig(CPF_Config, *Settings->GetDefaultConfigFilename());
 	}
 #endif  
@@ -115,6 +114,7 @@ void AMapCaptureActor::SaveMapInfo(UMinimapMapData* NewDataAsset, const FString&
 
 void AMapCaptureActor::WriteMapInfo(UMinimapMapData* DataAsset, UTexture2D* Tex)
 {
+	DataAsset->LevelName = UGameplayStatics::GetCurrentLevelName(GetWorld());
 	DataAsset->MapSize = EndPoint.X;
 	DataAsset->MapTexture = Tex;
 	DataAsset->TextureSize = TextureScale;

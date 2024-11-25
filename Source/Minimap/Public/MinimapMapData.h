@@ -13,6 +13,9 @@ struct FHotPointInfo
 	GENERATED_BODY()
 
 public:
+	UPROPERTY()
+	FGuid HotPointUniqueID;
+	
 	UPROPERTY(BlueprintReadOnly)
 	FVector Location;
 	
@@ -41,6 +44,9 @@ class MINIMAP_API UMinimapMapData : public UDataAsset
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Minimap")
+	FString LevelName;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Minimap")
 	UTexture2D* MapTexture;
 

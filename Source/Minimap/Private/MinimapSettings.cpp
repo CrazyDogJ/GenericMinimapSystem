@@ -19,3 +19,8 @@ TSubclassOf<UUserWidget> UMinimapSettings::GetMainmapWidgetClass() const
 {
     return MainMapWidgetClass.TryLoadClass<UUserWidget>();
 }
+
+TSubclassOf<UMapPinWidget> UMinimapSettings::GetCommonMapPinWidgetClass() const
+{
+    return CommonMapPinWidget.TryLoadClass<UMapPinWidget>();
+}

@@ -6,6 +6,35 @@
 #include "MinimapComponent.h"
 #include "MinimapComponent_Player.generated.h"
 
+USTRUCT(BlueprintType)
+struct FHotPointSaveGame
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(BlueprintReadOnly, SaveGame)
+	FString LevelName;
+
+	UPROPERTY(SaveGame)
+	TMap<FGuid, bool> HotPointFoundMap;
+};
+
+USTRUCT(BlueprintType)
+struct FMinimapSaveData
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(SaveGame, BlueprintReadOnly)
+	bool bHasTempPin = false;
+	
+	UPROPERTY(SaveGame, BlueprintReadOnly)
+	FVector TempPinLocation;
+
+	UPROPERTY(SaveGame, BlueprintReadOnly)
+	TArray<FHotPointSaveGame> HotPointSaveGames;
+};
+
 /**
  * 
  */
@@ -36,6 +65,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly)
 	FName TexturePropertyName = FName("RT");
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FHotPointSaveGame> HotPointSaveGames;
 	
 	UFUNCTION(BlueprintPure)
 	bool ShouldVisible() const;
@@ -67,6 +99,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void LoadSaveData(FMinimapSaveData inData, UTexture2D* MapMaskData);
 
+	UFUNCTION(BlueprintCallable)
+	bool IsHotPointFound(FHotPointInfo HotPointInfo);
+	
 	bool GetHitResultAtScreenPosition(const FVector2D ScreenPosition, const ECollisionChannel TraceChannel, const FCollisionQueryParams& CollisionQueryParams, FHitResult& HitResult) const;
 	
 protected:

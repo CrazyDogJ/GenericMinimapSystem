@@ -10,19 +10,6 @@
 class UMinimapSubsystem;
 class AMapPinActor;
 
-USTRUCT(BlueprintType)
-struct FMinimapSaveData
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(SaveGame, BlueprintReadOnly)
-	bool bHasTempPin = false;
-	
-	UPROPERTY(SaveGame, BlueprintReadOnly)
-	FVector TempPinLocation;
-};
-
 UCLASS(Blueprintable, meta=(BlueprintSpawnableComponent))
 class MINIMAP_API UMinimapComponent : public UActorComponent
 {
