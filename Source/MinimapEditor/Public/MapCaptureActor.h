@@ -34,7 +34,7 @@ public:
 
 	void WriteMapInfo(UMinimapMapData* DataAsset, UTexture2D* Tex);
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY()
 	USceneCaptureComponent2D* Capture2D;
 	
 	UPROPERTY(EditAnywhere)

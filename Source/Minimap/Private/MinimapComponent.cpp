@@ -33,9 +33,9 @@ void UMinimapComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
 UMinimapSubsystem* UMinimapComponent::GetMinimapSubsystem() const
 {
-	if (GetWorld() && GetWorld()->GetGameInstance())
+	if (GetWorld())
 	{
-		return GetWorld()->GetGameInstance()->GetSubsystem<UMinimapSubsystem>();
+		return GetWorld()->GetSubsystem<UMinimapSubsystem>();
 	}
 
 	return nullptr;
@@ -59,6 +59,8 @@ bool UMinimapComponent::IsLocalControlled() const
 void UMinimapComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	MinimapGuid = FGuid::NewGuid();
 	
 	if (UMinimapSubsystem* MinimapSubsystem = GetMinimapSubsystem())
 	{

@@ -13,7 +13,7 @@ struct FHotPointInfo
 	GENERATED_BODY()
 
 public:
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
 	FGuid HotPointUniqueID;
 	
 	UPROPERTY(BlueprintReadOnly)

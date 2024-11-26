@@ -27,6 +27,10 @@ AMapHotPointActor::AMapHotPointActor()
 #endif
 	
 	PrimaryActorTick.bCanEverTick = false;
+	if (!Info.HotPointUniqueID.IsValid())
+	{
+		Info.HotPointUniqueID = FGuid::NewGuid();
+	}
 }
 
 void AMapHotPointActor::FoundThisMapHotPoint(UMinimapComponent_Player* PlayerComp)
@@ -43,13 +47,13 @@ void AMapHotPointActor::FoundThisMapHotPoint(UMinimapComponent_Player* PlayerCom
 	
 	if (FoundStruct)
 	{
-		FoundStruct->HotPointFoundMap.Add(GetActorGuid(), true);
+		FoundStruct->HotPointFoundMap.Add(Info.HotPointUniqueID, true);
 	}
 	else
 	{
 		auto NewStruct = PlayerComp->HotPointSaveGames.Add(FHotPointSaveGame());
 		PlayerComp->HotPointSaveGames[NewStruct].LevelName = UGameplayStatics::GetCurrentLevelName(GetWorld());
-		PlayerComp->HotPointSaveGames[NewStruct].HotPointFoundMap.Add(GetActorGuid(), true);
+		PlayerComp->HotPointSaveGames[NewStruct].HotPointFoundMap.Add(Info.HotPointUniqueID, true);
 	}
 }
 
@@ -58,7 +62,6 @@ void AMapHotPointActor::OnConstruction(const FTransform& Transform)
 	Super::OnConstruction(Transform);
 
 	Info.Location = GetActorLocation();
-	Info.HotPointUniqueID = GetActorGuid();
 #if WITH_EDITORONLY_DATA
 	if (Info.HotPointIcon)
 	{

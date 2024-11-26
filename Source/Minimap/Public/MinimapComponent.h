@@ -23,6 +23,9 @@ public:
 
 	UMinimapSubsystem* GetMinimapSubsystem() const;
 
+	UPROPERTY(BlueprintReadOnly)
+	FGuid MinimapGuid;
+	
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, meta=(ExposeOnSpawn))
 	FSlateBrush PinSlateBrush;
 
