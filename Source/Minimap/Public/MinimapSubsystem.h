@@ -13,12 +13,12 @@ struct FStaticMapPin
 	GENERATED_BODY()
 
 	FStaticMapPin()
-		: Location(FVector::ZeroVector), MapPinBrush(FSlateBrush()), bAddToOverlay(false)
+		: Location(FVector::ZeroVector), MapPinBrush(FSlateBrush())
 	{
 	}
 
-	FStaticMapPin(FVector Loc, float Yaw, FSlateBrush Brush, bool bHasRotation, bool AddOverlay)
-		: Location(Loc), Yaw(Yaw), MapPinBrush(Brush), bHasRotation(bHasRotation), bAddToOverlay(AddOverlay)
+	FStaticMapPin(const FVector& Loc, float Yaw, const FSlateBrush& Brush, bool HasRotation, bool AddOverlay, bool AlwaysOnMinimap)
+		: Location(Loc), Yaw(Yaw), MapPinBrush(Brush), bHasRotation(HasRotation), bAddToOverlay(AddOverlay), bAlwaysOnMinimap(AlwaysOnMinimap)
 	{
 	}
 
@@ -39,8 +39,17 @@ public:
 	bool bHasRotation = false;
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	bool bAddToOverlay;
+	bool bAddToOverlay = false;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool bAlwaysOnMinimap = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	FText PinName;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	FText PinDescription;
+	
 	bool operator==(const FStaticMapPin& Other) const
 	{
 		return IdentifyGuid == Other.IdentifyGuid;
@@ -104,16 +113,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
 	FStaticMapPin GetShownMinimapPin(FGuid Guid) const;
-	/**
-	 * Add a static location pin on map.
-	 * @param Location Static location
-	 * @param PinSlateBrush Map pin brush
-	 * @param bAddToOverlay Add to overlay
-	 * @return Id that reference to the static pin
-	 */
-	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
-	FGuid AddStaticLocationPin(FVector Location, float Yaw, FSlateBrush PinSlateBrush, bool bHasRotation, bool bAddToOverlay);
 
+	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
+	FGuid AddStaticLocationPin(FStaticMapPin InPin);
+	
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
 	void RemoveStaticLocationPin(FGuid MapPinGuid);
 

@@ -28,8 +28,8 @@ public:
 	UPROPERTY()
 	UMinimapComponent* MinimapComp;
 
-	UPROPERTY()
-	UWidgetComponent* WidgetComponent;
+	//UPROPERTY()
+	//UWidgetComponent* WidgetComponent;
 
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite)
 	FSlateBrush PinSlateBrush;

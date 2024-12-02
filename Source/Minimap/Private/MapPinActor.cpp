@@ -23,10 +23,10 @@ AMapPinActor::AMapPinActor(const FObjectInitializer& ObjectInitializer)
 	MinimapComp = CreateDefaultSubobject<UMinimapComponent>(TEXT("MinimapComponent"));
 	MinimapComp->PinSlateBrush = PinSlateBrush;
 	MinimapComp->bAddToOverlay = true;
-	WidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Widget"));
-	WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
-	WidgetComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	WidgetComponent->SetupAttachment(SceneComponent);
+	//WidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Widget"));
+	//WidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	//WidgetComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	//WidgetComponent->SetupAttachment(SceneComponent);
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	bReplicates = true;
@@ -46,16 +46,16 @@ void AMapPinActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (auto Class = UMinimapBlueprintFunctionLibrary::GetMapPinWidgetClass())
-	{
-		if (UMapPinWidget* Widget = CreateWidget<UMapPinWidget>(GetWorld(), Class))
-		{
-			Widget->Brush = PinSlateBrush;
-			Widget->OwnerActor = this;
-			WidgetComponent->SetWidget(Widget);
-			WidgetComponent->RequestRedraw();
-		}
-	}
+	//if (auto Class = UMinimapBlueprintFunctionLibrary::GetMapPinWidgetClass())
+	//{
+	//	if (UMapPinWidget* Widget = CreateWidget<UMapPinWidget>(GetWorld(), Class))
+	//	{
+	//		Widget->Brush = PinSlateBrush;
+	//		Widget->OwnerActor = this;
+	//		WidgetComponent->SetWidget(Widget);
+	//		WidgetComponent->RequestRedraw();
+	//	}
+	//}
 	
 	if (bCollision)
 	{

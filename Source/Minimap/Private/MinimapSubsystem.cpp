@@ -54,7 +54,7 @@ FStaticMapPin UMinimapSubsystem::GetShownMinimapPin(FGuid Guid) const
     {
         auto Comp = *Ptr;
         return FStaticMapPin(Comp->GetOwner()->GetActorLocation(), Comp->GetOwner()->GetActorRotation().Yaw,
-                             Comp->PinSlateBrush, Comp->bRotate, Comp->bAddToOverlay);
+                             Comp->PinSlateBrush, Comp->bRotate, Comp->bAddToOverlay, Comp->bAlwaysShow);
     }
     
     auto StaticPtr = StaticMapPins.FindByPredicate([&](const FStaticMapPin& Pin)
@@ -70,13 +70,19 @@ FStaticMapPin UMinimapSubsystem::GetShownMinimapPin(FGuid Guid) const
     return FStaticMapPin();
 }
 
-FGuid UMinimapSubsystem::AddStaticLocationPin(FVector Location, float Yaw, FSlateBrush PinSlateBrush, bool bHasRotation, bool bAddToOverlay)
+FGuid UMinimapSubsystem::AddStaticLocationPin(FStaticMapPin InPin)
 {
-    auto MapPin = FStaticMapPin(Location, Yaw, PinSlateBrush, bHasRotation, bAddToOverlay);
-    MapPin.IdentifyGuid = FGuid::NewGuid();
-    StaticMapPins.Add(MapPin);
-    OnStaticRegistered.Broadcast(MapPin);
-    return MapPin.IdentifyGuid;
+    if (!InPin.IdentifyGuid.IsValid())
+    {
+        InPin.IdentifyGuid = FGuid::NewGuid();
+    }
+    if (InPin.bAlwaysOnMinimap)
+    {
+        AddMinimapPin(InPin.IdentifyGuid);
+    }
+    StaticMapPins.Add(InPin);
+    OnStaticRegistered.Broadcast(InPin);
+    return InPin.IdentifyGuid;
 }
 
 void UMinimapSubsystem::RemoveStaticLocationPin(FGuid MapPinGuid)
@@ -113,8 +119,11 @@ UMinimapMapData* UMinimapSubsystem::GetCurrentMinimapMapData()
                 0.0f,
                 UWidgetBlueprintLibrary::MakeBrushFromTexture(HotPoint.HotPointIcon, 32, 32),
                 false,
+                false,
                 false);
             NewPin.IdentifyGuid = HotPoint.HotPointUniqueID;
+            NewPin.PinName = HotPoint.HotPointName;
+            NewPin.PinDescription = HotPoint.HotPointDescription;
             StaticMapPins.AddUnique(NewPin);
         }
         return CurrentMinimapMapData;
@@ -209,7 +218,10 @@ void UMinimapSubsystem::Tick(float DeltaTime)
 
     for (auto Pin : StaticMapPins)
     {
-        TempMap.Add(Pin.IdentifyGuid, Pin.Location);
+        if (!Pin.bAlwaysOnMinimap)
+        {
+            TempMap.Add(Pin.IdentifyGuid, Pin.Location);
+        }
     }
     
     for (auto MapPin : TempMap)
