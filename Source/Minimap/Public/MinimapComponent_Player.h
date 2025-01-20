@@ -54,7 +54,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	APawn* OwnerPawn;
 
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
 	UTextureRenderTarget2D* RT;
 
 	UPROPERTY(EditDefaultsOnly)
@@ -103,7 +103,20 @@ public:
 	bool IsHotPointFound(FHotPointInfo HotPointInfo);
 	
 	bool GetHitResultAtScreenPosition(const FVector2D ScreenPosition, const ECollisionChannel TraceChannel, const FCollisionQueryParams& CollisionQueryParams, FHitResult& HitResult) const;
+
+	TArray<uint8> SerializeRenderTargetData (int32& Width, int32& Height) const;
+
+	UFUNCTION(BlueprintCallable)
+	void SendRenderTargetData();
 	
+	UFUNCTION(Server, Reliable)
+	void SendRenderTargetToServer(const int32& Width, const int32& Height, const TArray<uint8>& Data);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void SendRenderTargetToClients(const int32& Width, const int32& Height, const TArray<uint8>& Data);
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnRenderTargetReceived(UTexture2D* Texture2D);
 protected:
 	virtual void BeginPlay() override;
 

@@ -13,6 +13,8 @@
 #include "GameFramework/PlayerState.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetRenderingLibrary.h"
+#include "Serialization/ArchiveLoadCompressedProxy.h"
+#include "Serialization/ArchiveSaveCompressedProxy.h"
 
 void UMinimapComponent_Player::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -132,6 +134,75 @@ bool UMinimapComponent_Player::GetHitResultAtScreenPosition(const FVector2D Scre
 	}
 
 	return false;
+}
+
+TArray<uint8> UMinimapComponent_Player::SerializeRenderTargetData(int32& Width, int32& Height) const
+{
+	if (!RT)
+	{
+		return TArray<uint8>();
+	}
+
+	Width = RT->SizeX;
+	Height = RT->SizeY;
+	
+	TArray<FColor> PixelData;
+	if (FRenderTarget* RenderTarget = RT->GameThread_GetRenderTargetResource())
+	{
+		RenderTarget->ReadPixels(PixelData);
+	}
+
+	TArray<uint8> SerializedData;
+	FMemoryWriter Writer(SerializedData, true);
+	Writer << PixelData;
+	
+	TArray<uint8> CompressedData;
+	FArchiveSaveCompressedProxy Compressor(CompressedData, NAME_Zlib);
+	Compressor << SerializedData;
+	Compressor.Flush();
+	
+	return CompressedData;
+}
+
+void UMinimapComponent_Player::SendRenderTargetData()
+{
+	int32 Width;
+	int32 Height;
+	auto SerializedData = SerializeRenderTargetData(Width, Height);
+	if (GetOwnerRole() >= ROLE_Authority)
+	{
+		SendRenderTargetToClients(Width, Height, SerializedData);
+		return;
+	}
+
+	SendRenderTargetToServer(Width, Height, SerializedData);
+}
+
+void UMinimapComponent_Player::SendRenderTargetToServer_Implementation(const int& Width, const int& Height, const TArray<uint8>& Data)
+{
+	SendRenderTargetToClients(Width, Height, Data);
+}
+
+void UMinimapComponent_Player::SendRenderTargetToClients_Implementation(const int& Width, const int& Height, const TArray<uint8>& Data)
+{
+	TArray<uint8> DecompressedData;
+	FArchiveLoadCompressedProxy Decompressor(Data, NAME_Zlib);
+	Decompressor << DecompressedData;
+
+	TArray<FColor> PixelData;
+	FMemoryReader Reader(DecompressedData, true);
+	Reader << PixelData;
+
+	if (UTexture2D* NewTexture = UTexture2D::CreateTransient(Width, Height, PF_B8G8R8A8))
+	{
+		FTexture2DMipMap& Mip = NewTexture->GetPlatformData()->Mips[0];
+		void* TextureData = Mip.BulkData.Lock(LOCK_READ_WRITE);
+		FMemory::Memcpy(TextureData, PixelData.GetData(), PixelData.Num() * sizeof(FColor));
+		Mip.BulkData.Unlock();
+		NewTexture->UpdateResource();
+		
+		OnRenderTargetReceived(NewTexture);
+	}
 }
 
 void UMinimapComponent_Player::BeginPlay()
