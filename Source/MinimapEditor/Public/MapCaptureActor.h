@@ -43,6 +43,12 @@ public:
 	UPROPERTY(EditAnywhere, meta = (MakeEditWidget))
 	FVector EndPoint = FVector(5,5,0);
 
+	UPROPERTY(EditAnywhere)
+	bool bLocalMap = false;
+
+	UPROPERTY(EditAnywhere, meta = (EditCondition=bLocalMap))
+	FString MapName;
+
 protected:
 
 	virtual void OnConstruction(const FTransform& Transform) override;

@@ -34,6 +34,15 @@ UMinimapComponent_Player::UMinimapComponent_Player(const FObjectInitializer& Obj
 	MaskLoadMaterial = nullptr;
 }
 
+void UMinimapComponent_Player::SetCurrentLocalMinimapData(UMinimapMapData* MinimapData)
+{
+	if (CurrentLocalMinimapData != MinimapData)
+	{
+		CurrentLocalMinimapData = MinimapData;
+		OnLocalMinimapChanged.Broadcast(CurrentLocalMinimapData);
+	}
+}
+
 bool UMinimapComponent_Player::ShouldVisible() const
 {
 	const auto OwnedPlayerController = OwnerPawn->GetController();

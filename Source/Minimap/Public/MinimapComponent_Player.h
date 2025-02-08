@@ -35,6 +35,8 @@ public:
 	TArray<FHotPointSaveGame> HotPointSaveGames;
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLocalMinimapChanged, UMinimapMapData*, ChangedMinimapData);
+
 /**
  * 
  */
@@ -48,6 +50,7 @@ class MINIMAP_API UMinimapComponent_Player : public UMinimapComponent
 	UMinimapComponent_Player(const FObjectInitializer& ObjectInitializer);
 	
 public:
+	// Properties
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite)
 	FSlateBrush TempPinBrush;
 
@@ -68,6 +71,19 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FHotPointSaveGame> HotPointSaveGames;
+
+protected:
+	// If you enter a local minimap area, this will be changed.
+	UPROPERTY(BlueprintReadOnly)
+	UMinimapMapData* CurrentLocalMinimapData = nullptr;
+
+	// Functions
+public:
+	UPROPERTY(BlueprintAssignable)
+	FOnLocalMinimapChanged OnLocalMinimapChanged;
+	
+	UMinimapMapData* GetCurrentLocalMinimapData() const {return CurrentLocalMinimapData;}
+	void SetCurrentLocalMinimapData(UMinimapMapData* MinimapData);
 	
 	UFUNCTION(BlueprintPure)
 	bool ShouldVisible() const;
