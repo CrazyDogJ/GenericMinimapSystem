@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Engine/Datatable.h"
 #include "MinimapStructs.generated.h"
 
@@ -28,4 +29,56 @@ public:
 	FVector CaptureActorLocation;
 
 	bool IsValid() const;
+};
+
+USTRUCT(BlueprintType)
+struct FStaticMapPin
+{
+	GENERATED_BODY()
+
+	FStaticMapPin()
+		: Location(FVector::ZeroVector), MapPinBrush(FSlateBrush())
+	{
+	}
+
+	FStaticMapPin(const FVector& Loc, float Yaw, const FSlateBrush& Brush, bool HasRotation, bool AddOverlay, bool AlwaysOnMinimap)
+		: Location(Loc), Yaw(Yaw), MapPinBrush(Brush), bHasRotation(HasRotation), bAddToOverlay(AddOverlay), bAlwaysOnMinimap(AlwaysOnMinimap)
+	{
+	}
+
+public:
+	UPROPERTY(BlueprintReadOnly)
+	FGuid IdentifyGuid;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	FVector Location;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	float Yaw = 0.0f;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	FSlateBrush MapPinBrush;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	FGameplayTag CategoryTag;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool bHasRotation = false;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool bAddToOverlay = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool bAlwaysOnMinimap = false;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	FText PinName;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	FText PinDescription;
+	
+	bool operator==(const FStaticMapPin& Other) const
+	{
+		return IdentifyGuid == Other.IdentifyGuid;
+	}
 };

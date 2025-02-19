@@ -23,7 +23,8 @@ public:
 
 	UMinimapSubsystem* GetMinimapSubsystem() const;
 
-	UPROPERTY(BlueprintReadOnly)
+	// Properties for minimap static pin struct
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Replicated)
 	FGuid MinimapGuid;
 	
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, meta=(ExposeOnSpawn))
@@ -31,6 +32,9 @@ public:
 
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, meta=(ExposeOnSpawn))
 	bool bAddToOverlay;
+
+	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite)
+	FGameplayTag MinimapCategory;
 	
 	UPROPERTY(Replicated, BlueprintReadWrite)
 	int32 UniqueColorIndex = -1;
@@ -40,9 +44,10 @@ public:
 
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite)
 	bool bAlwaysShow;
-	
-	UPROPERTY(BlueprintReadWrite, Replicated)
-	AMapPinActor* TempPin;
+
+	//Get properties to struct
+	UFUNCTION(BlueprintPure)
+	FStaticMapPin GetCurrentStaticMapPin();
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnCompReg(UMinimapComponent* Component);

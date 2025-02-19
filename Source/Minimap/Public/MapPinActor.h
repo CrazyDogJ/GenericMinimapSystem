@@ -6,7 +6,6 @@
 #include "MinimapComponent.h"
 #include "GameFramework/Actor.h"
 #include "Components/SphereComponent.h"
-#include "Components/WidgetComponent.h"
 #include "MapPinActor.generated.h"
 
 UCLASS()
@@ -25,7 +24,7 @@ public:
 	UPROPERTY()
 	USceneComponent* SceneComponent;
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	UMinimapComponent* MinimapComp;
 
 	//UPROPERTY()

@@ -21,6 +21,7 @@ void UMinimapComponent_Player::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(UMinimapComponent_Player, TempPinBrush);
+	DOREPLIFETIME(UMinimapComponent_Player, TempPin);
 }
 
 UMinimapComponent_Player::UMinimapComponent_Player(const FObjectInitializer& ObjectInitializer)
@@ -116,13 +117,41 @@ void UMinimapComponent_Player::AddTempPin_MainMap(const FVector2D Location, cons
 	const FVector End = FVector(Location.X, Location.Y, MapHighestPoint - HitResultTraceDistance);
 	if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, TraceChannel))
 	{
-		AddTempPinExec(HitResult.Location);
+		// Listen server fix
+		if (GetOwnerRole() == ROLE_Authority)
+		{
+			AddTempPinImplement(HitResult.Location);
+		}
+		else
+		{
+			AddTempPinExec(HitResult.Location);
+		}
 	}
 }
 
 void UMinimapComponent_Player::RemoveTempPin_MainMap()
 {
 	RemoveTempPinExec();
+}
+
+void UMinimapComponent_Player::AddTempPinImplement(FVector Location)
+{
+	FActorSpawnParameters spawnInfo;
+	spawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	TempPin = GetWorld()->SpawnActorDeferred<AMapPinActor>(AMapPinActor::StaticClass(), FTransform(Location));
+	if (TempPin)
+	{
+		TempPin->bCollision = true;
+		TempPin->PinSlateBrush = TempPinBrush;
+		TempPin->MinimapComp->bAlwaysShow = true;
+		TempPin->SetOwner(GetOwner()->GetOwner());
+		TempPin->FinishSpawning(FTransform(Location));
+	}
+}
+
+void UMinimapComponent_Player::AddTempPinMulticast_Implementation(FVector Location)
+{
+	AddTempPinImplement(Location);
 }
 
 bool UMinimapComponent_Player::GetHitResultAtScreenPosition(const FVector2D ScreenPosition,
@@ -270,15 +299,7 @@ void UMinimapComponent_Player::SetUniqueColorIndex_Implementation()
 
 void UMinimapComponent_Player::AddTempPinExec_Implementation(FVector Location)
 {
-	FActorSpawnParameters spawnInfo;
-	spawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	TempPin = GetWorld()->SpawnActorDeferred<AMapPinActor>(AMapPinActor::StaticClass(), FTransform(Location));
-	if (TempPin)
-	{
-		TempPin->bCollision = true;
-		TempPin->PinSlateBrush = TempPinBrush;
-		TempPin->FinishSpawning(FTransform(Location));
-	}
+	AddTempPinImplement(Location);
 }
 
 void UMinimapComponent_Player::RemoveTempPinExec_Implementation()

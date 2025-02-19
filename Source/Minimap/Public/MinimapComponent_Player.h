@@ -72,6 +72,9 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FHotPointSaveGame> HotPointSaveGames;
 
+	UPROPERTY(BlueprintReadWrite, Replicated)
+	AMapPinActor* TempPin;
+
 protected:
 	// If you enter a local minimap area, this will be changed.
 	UPROPERTY(BlueprintReadOnly)
@@ -103,8 +106,14 @@ public:
 	UFUNCTION(BlueprintCallable, Server, Reliable)
 	void SetUniqueColorIndex();
 
+	void AddTempPinImplement(FVector Location);
+	
 	UFUNCTION(Server, Reliable)
 	void AddTempPinExec(FVector Location);
+
+	// Fix on listen server
+	UFUNCTION(NetMulticast, Reliable)
+	void AddTempPinMulticast(FVector Location);
 
 	UFUNCTION(Server, Reliable)
 	void RemoveTempPinExec();

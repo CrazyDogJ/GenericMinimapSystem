@@ -3,9 +3,8 @@
 
 #include "MapPinActor.h"
 
-#include "MinimapBlueprintFunctionLibrary.h"
 #include "MinimapComponent.h"
-#include "MinimapSettings.h"
+#include "MinimapComponent_Player.h"
 #include "Net/UnrealNetwork.h"
 
 void AMapPinActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -30,13 +29,14 @@ AMapPinActor::AMapPinActor(const FObjectInitializer& ObjectInitializer)
 	PrimaryActorTick.bCanEverTick = false;
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	bReplicates = true;
+	bAlwaysRelevant = true;
 }
 
 void AMapPinActor::Overlapped(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,int32 OtherBodyIndex,bool bFromSweep,const FHitResult& SweepResult)
 {
-	if (Cast<UMinimapComponent>(OtherActor->GetComponentByClass(UMinimapComponent::StaticClass()))->TempPin == this)
+	if (Cast<UMinimapComponent_Player>(OtherActor->GetComponentByClass(UMinimapComponent_Player::StaticClass()))->TempPin == this)
 	{
-		Cast<UMinimapComponent>(OtherActor->GetComponentByClass(UMinimapComponent::StaticClass()))->TempPin = nullptr;
+		Cast<UMinimapComponent_Player>(OtherActor->GetComponentByClass(UMinimapComponent_Player::StaticClass()))->TempPin = nullptr;
 		K2_DestroyActor();
 	}
 }

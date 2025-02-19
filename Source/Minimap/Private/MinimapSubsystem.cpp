@@ -15,6 +15,8 @@ void UMinimapSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 void UMinimapSubsystem::Deinitialize()
 {
     MinimapComponentRegistry.Empty();
+    StaticMapPins.Empty();
+    ShownMapPinsGuids.Empty();
 
     Super::Deinitialize();
 }
@@ -44,22 +46,32 @@ FStaticMapPin UMinimapSubsystem::GetShownMinimapPin(FGuid Guid) const
     {
         return FStaticMapPin();
     }
-    
-    const auto Ptr = MinimapComponentRegistry.FindByPredicate([&](const TObjectPtr<UMinimapComponent>& Comp)
-    {
-        return Comp->MinimapGuid == Guid;
-    });
 
-    if (Ptr)
+    auto NewStaticMapPins = StaticMapPins;
+    
+    for (auto RegisteredComp : MinimapComponentRegistry)
     {
-        auto Comp = *Ptr;
-        return FStaticMapPin(Comp->GetOwner()->GetActorLocation(), Comp->GetOwner()->GetActorRotation().Yaw,
-                             Comp->PinSlateBrush, Comp->bRotate, Comp->bAddToOverlay, Comp->bAlwaysShow);
+        if (RegisteredComp->MinimapGuid.IsValid())
+        {
+            auto StaticPtr = StaticMapPins.IndexOfByPredicate([&](const FStaticMapPin& Pin)
+            {
+               return Pin.IdentifyGuid == RegisteredComp->MinimapGuid; 
+            });
+            
+            if (StaticPtr >= 0)
+            {
+                NewStaticMapPins[StaticPtr] = RegisteredComp->GetCurrentStaticMapPin();
+            }
+            else
+            {
+                NewStaticMapPins.Add(RegisteredComp->GetCurrentStaticMapPin());
+            }
+        }
     }
     
-    auto StaticPtr = StaticMapPins.FindByPredicate([&](const FStaticMapPin& Pin)
+    auto StaticPtr = NewStaticMapPins.FindByPredicate([&](const FStaticMapPin& Pin)
     {
-       return Pin.IdentifyGuid == Guid; 
+        return Pin.IdentifyGuid == Guid; 
     });
 
     if (StaticPtr)
@@ -206,33 +218,41 @@ void UMinimapSubsystem::Tick(float DeltaTime)
         return;
     }
     
-    // Dynamic update
-    TMap<FGuid, FVector> TempMap;
+    // Add pins guid and add always show pin
+    TArray<FGuid> MapPinsGuidArray;
     for (auto Comp : MinimapComponentRegistry)
     {
-        if (CurrentLocalPlayerActor != Comp->GetOwner())
+        if (!Comp->bAlwaysShow)
         {
-            TempMap.Add(Comp->MinimapGuid, Comp->GetOwner()->GetActorLocation());
+            MapPinsGuidArray.AddUnique(Comp->MinimapGuid);
+        }
+        else
+        {
+            AddMinimapPin(Comp->MinimapGuid);
         }
     }
-
     for (auto Pin : StaticMapPins)
     {
         if (!Pin.bAlwaysOnMinimap)
         {
-            TempMap.Add(Pin.IdentifyGuid, Pin.Location);
-        }
-    }
-    
-    for (auto MapPin : TempMap)
-    {
-        if (FVector::Dist2D(CurrentLocalPlayerActor->GetActorLocation(), MapPin.Value) <= MinimapRadius / 2)
-        {
-            AddMinimapPin(MapPin.Key);
+            MapPinsGuidArray.AddUnique(Pin.IdentifyGuid);
         }
         else
         {
-            RemoveMinimapPin(MapPin.Key);
+            AddMinimapPin(Pin.IdentifyGuid);
+        }
+    }
+    
+    // Update visible
+    for (auto MapPin : MapPinsGuidArray)
+    {
+        if (FVector::Dist2D(CurrentLocalPlayerActor->GetActorLocation(), GetShownMinimapPin(MapPin).Location) <= MinimapRadius / 2)
+        {
+            AddMinimapPin(MapPin);
+        }
+        else
+        {
+            RemoveMinimapPin(MapPin);
         }
     }
 }

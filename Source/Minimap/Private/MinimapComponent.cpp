@@ -26,7 +26,6 @@ void UMinimapComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(UMinimapComponent, PinSlateBrush);
 	DOREPLIFETIME(UMinimapComponent, bRotate);
 	DOREPLIFETIME(UMinimapComponent, bAlwaysShow);
-	DOREPLIFETIME(UMinimapComponent, TempPin);
 	DOREPLIFETIME(UMinimapComponent, UniqueColorIndex);
 	DOREPLIFETIME(UMinimapComponent, bAddToOverlay);
 }
@@ -39,6 +38,21 @@ UMinimapSubsystem* UMinimapComponent::GetMinimapSubsystem() const
 	}
 
 	return nullptr;
+}
+
+FStaticMapPin UMinimapComponent::GetCurrentStaticMapPin()
+{
+	FStaticMapPin Result;
+	Result.IdentifyGuid = MinimapGuid;
+	Result.Location = GetOwner()->GetActorLocation();
+	Result.Yaw = GetOwner()->GetActorRotation().Yaw;
+	Result.bHasRotation = bRotate;
+	Result.CategoryTag = MinimapCategory;
+	Result.bAddToOverlay = bAddToOverlay;
+	Result.bAlwaysOnMinimap = bAlwaysShow;
+	Result.MapPinBrush = PinSlateBrush;
+	//TODO:Name and description;
+	return Result;
 }
 
 APlayerState* UMinimapComponent::GetPlayerState() const
@@ -59,8 +73,12 @@ bool UMinimapComponent::IsLocalControlled() const
 void UMinimapComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	MinimapGuid = FGuid::NewGuid();
+
+	// Init guid when begin play(if not valid)
+	if (!MinimapGuid.IsValid())
+	{
+		MinimapGuid = FGuid::NewGuid();
+	}
 	
 	if (UMinimapSubsystem* MinimapSubsystem = GetMinimapSubsystem())
 	{
@@ -76,6 +94,10 @@ void UMinimapComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (UMinimapSubsystem* MinimapSubsystem = GetMinimapSubsystem())
 	{
+		MinimapSubsystem->OnComponentRegistered.RemoveDynamic(this, &UMinimapComponent::OnCompReg);
+		MinimapSubsystem->OnComponentUnregistered.RemoveDynamic(this, &UMinimapComponent::OnCompUnreg);
+		MinimapSubsystem->OnStaticRegistered.RemoveDynamic(this, &UMinimapComponent::OnStaticReg);
+		MinimapSubsystem->OnStaticUnregistered.RemoveDynamic(this, &UMinimapComponent::OnStaticUnreg);
 		MinimapSubsystem->UnregisterComponent(this);
 	}
 	

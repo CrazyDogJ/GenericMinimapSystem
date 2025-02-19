@@ -4,57 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "MinimapMapData.h"
-#include "Subsystems/GameInstanceSubsystem.h"
+#include "MinimapStructs.h"
 #include "MinimapSubsystem.generated.h"
-
-USTRUCT(BlueprintType)
-struct FStaticMapPin
-{
-	GENERATED_BODY()
-
-	FStaticMapPin()
-		: Location(FVector::ZeroVector), MapPinBrush(FSlateBrush())
-	{
-	}
-
-	FStaticMapPin(const FVector& Loc, float Yaw, const FSlateBrush& Brush, bool HasRotation, bool AddOverlay, bool AlwaysOnMinimap)
-		: Location(Loc), Yaw(Yaw), MapPinBrush(Brush), bHasRotation(HasRotation), bAddToOverlay(AddOverlay), bAlwaysOnMinimap(AlwaysOnMinimap)
-	{
-	}
-
-public:
-	UPROPERTY(BlueprintReadOnly)
-	FGuid IdentifyGuid;
-	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	FVector Location;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	float Yaw = 0.0f;
-	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	FSlateBrush MapPinBrush;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	bool bHasRotation = false;
-	
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	bool bAddToOverlay = false;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	bool bAlwaysOnMinimap = false;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	FText PinName;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	FText PinDescription;
-	
-	bool operator==(const FStaticMapPin& Other) const
-	{
-		return IdentifyGuid == Other.IdentifyGuid;
-	}
-};
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapComponentEvent, UMinimapComponent*, Component);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStaticMapPinEvent, const FStaticMapPin&, StaticMapPin);
@@ -74,6 +25,7 @@ public:
 
 	friend class UMinimapComponent;
 
+#pragma region Delegate
 	/* Called when actor with Minimap Component appears in the world */
 	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
 	FMinimapComponentEvent OnComponentRegistered;
@@ -95,7 +47,7 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
 	FShownMapPinEvent OnMapPinHideOnMinimap;
-	
+#pragma endregion 
 	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem")
 	UMinimapMapData* CurrentMinimapMapData;
 
