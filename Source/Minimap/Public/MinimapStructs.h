@@ -47,7 +47,7 @@ struct FStaticMapPin
 	}
 
 public:
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FGuid IdentifyGuid;
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)

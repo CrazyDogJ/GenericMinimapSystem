@@ -62,7 +62,7 @@ FStaticMapPin UMinimapSubsystem::GetShownMinimapPin(FGuid Guid) const
             {
                 NewStaticMapPins[StaticPtr] = RegisteredComp->GetCurrentStaticMapPin();
             }
-            else
+            else if (RegisteredComp->bIsIndividual)
             {
                 NewStaticMapPins.Add(RegisteredComp->GetCurrentStaticMapPin());
             }
@@ -106,6 +106,7 @@ void UMinimapSubsystem::RemoveStaticLocationPin(FGuid MapPinGuid)
     {
         auto Result = StaticMapPins[Index];
         OnStaticUnregistered.Broadcast(Result);
+        StaticMapPins.Remove(Pin);
     }
     RemoveMinimapPin(MapPinGuid);
 }
@@ -226,7 +227,7 @@ void UMinimapSubsystem::Tick(float DeltaTime)
         {
             MapPinsGuidArray.AddUnique(Comp->MinimapGuid);
         }
-        else
+        else if (Comp->bIsIndividual)
         {
             AddMinimapPin(Comp->MinimapGuid);
         }

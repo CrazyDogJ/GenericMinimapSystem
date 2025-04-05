@@ -26,6 +26,12 @@ public:
 	// Properties for minimap static pin struct
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Replicated)
 	FGuid MinimapGuid;
+
+	/* If individual, minimap subsystem will treat it as a single map pin instance
+	 * else we use it override the static map pin, and it will disappear if static map pin was removed.
+	 **/
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Replicated)
+	bool bIsIndividual = true;
 	
 	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, meta=(ExposeOnSpawn))
 	FSlateBrush PinSlateBrush;
