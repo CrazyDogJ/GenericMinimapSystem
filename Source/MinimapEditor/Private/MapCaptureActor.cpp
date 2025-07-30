@@ -94,7 +94,7 @@ void AMapCaptureActor::CaptureMap()
 		SaveArgs.SaveFlags = SAVE_NoError;
 		UPackage::SavePackage(Package, nullptr, *PackageFileName, SaveArgs);
 		
-		TSoftObjectPtr<UMinimapMapData> SoftRef(AssetPath + "." + AssetName);
+		auto SoftRef = TSoftObjectPtr<UMinimapMapData>(FSoftObjectPath(AssetPath + "." + AssetName));
 		if (!bLocalMap)
 		{
 			Settings->MapsInfos.Add(UGameplayStatics::GetCurrentLevelName(GetWorld()), SoftRef);
