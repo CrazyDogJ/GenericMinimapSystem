@@ -44,23 +44,23 @@ void UMinimapComponent_Player::SetCurrentLocalMinimapData(UMinimapMapData* Minim
 	}
 }
 
-bool UMinimapComponent_Player::ShouldVisible() const
-{
-	const auto OwnedPlayerController = OwnerPawn->GetController();
-	if (OwnedPlayerController == UGameplayStatics::GetPlayerController(GetWorld(), 0))
-	{
-		return true;
-	}
-	
-	auto SelfTeamID = Cast<IGenericTeamAgentInterface>(UGameplayStatics::GetPlayerController(GetWorld(), 0))->GetGenericTeamId();
-	if (!OwnerPawn->GetPlayerState())
-	{
-		return false;
-	}
-	auto CompTeamID = Cast<IGenericTeamAgentInterface>(OwnerPawn->GetPlayerState())->GetGenericTeamId();
-	
-	return SelfTeamID == CompTeamID;
-}
+//bool UMinimapComponent_Player::ShouldVisible_Implementation() const
+//{
+//	const auto OwnedPlayerController = OwnerPawn->GetController();
+//	if (OwnedPlayerController == UGameplayStatics::GetPlayerController(GetWorld(), 0))
+//	{
+//		return true;
+//	}
+//	
+//	auto SelfTeamID = Cast<IGenericTeamAgentInterface>(UGameplayStatics::GetPlayerController(GetWorld(), 0))->GetGenericTeamId();
+//	if (!OwnerPawn->GetPlayerState())
+//	{
+//		return false;
+//	}
+//	auto CompTeamID = Cast<IGenericTeamAgentInterface>(OwnerPawn->GetPlayerState())->GetGenericTeamId();
+//	
+//	return SelfTeamID == CompTeamID;
+//}
 
 void UMinimapComponent_Player::AddTempPin()
 {

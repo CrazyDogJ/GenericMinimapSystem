@@ -66,6 +66,9 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnStaticUnreg(const FStaticMapPin& StaticMapPin);
+
+	UFUNCTION(BlueprintNativeEvent)
+	bool ShouldVisible();
 	
 //helper functions
 public:

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "MapPinWidget.h"
 #include "MinimapMapData.h"
+#include "MinimapUserSettings.h"
 #include "MinimapSettings.generated.h"
 
 /**
@@ -45,12 +46,15 @@ public:
 	float ControllerHitResultDistance;
 
 	/** Mini map widget class */
-	UPROPERTY(EditAnywhere, config, meta = (MetaClass = "/Script/UMG.UserWidget"), AdvancedDisplay)
+	UPROPERTY(EditAnywhere, config, meta = (MetaClass = "/Script/UMG.UserWidget"), AdvancedDisplay, Category = "Minimap Settings")
 	FSoftClassPath MiniMapWidgetClass;
 
 	/** Main map widget class */
-	UPROPERTY(EditAnywhere, config, meta = (MetaClass = "/Script/UMG.UserWidget"), AdvancedDisplay)
+	UPROPERTY(EditAnywhere, config, meta = (MetaClass = "/Script/UMG.UserWidget"), AdvancedDisplay, Category = "Minimap Settings")
 	FSoftClassPath MainMapWidgetClass;
+
+	UPROPERTY(EditAnywhere, Config, AdvancedDisplay, Category = "Minimap Settings")
+	TSoftClassPtr<UMinimapUserSettings> MinimapUserSettingsClass;
 
 	/** Get mini map widget class */
 	TSubclassOf<UUserWidget> GetMinimapWidgetClass() const;
@@ -59,4 +63,6 @@ public:
 	TSubclassOf<UUserWidget> GetMainmapWidgetClass() const;
 
 	TSubclassOf<UMapPinWidget> GetCommonMapPinWidgetClass() const;
+
+	TSubclassOf<UMinimapUserSettings> GetMinimapUserSettingsClass() const;
 };

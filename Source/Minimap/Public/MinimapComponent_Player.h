@@ -88,9 +88,6 @@ public:
 	UMinimapMapData* GetCurrentLocalMinimapData() const {return CurrentLocalMinimapData;}
 	void SetCurrentLocalMinimapData(UMinimapMapData* MinimapData);
 	
-	UFUNCTION(BlueprintPure)
-	bool ShouldVisible() const;
-	
 	/**
 	 * Add temp pin at the mid of screen.
 	 */

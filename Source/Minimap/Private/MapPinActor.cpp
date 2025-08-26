@@ -81,7 +81,8 @@ void AMapPinActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AMapPinActor::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
-	
+
+	MinimapComp->MinimapGuid.NewGuid();
 	MinimapComp->PinSlateBrush = PinSlateBrush;
 	MinimapComp->bRotate = false;
 	MinimapComp->bAlwaysShow = true;

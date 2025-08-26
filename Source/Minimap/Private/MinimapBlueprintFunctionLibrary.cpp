@@ -2,6 +2,8 @@
 
 
 #include "MinimapBlueprintFunctionLibrary.h"
+
+#include "MinimapUserSettings.h"
 #include "GameFramework/PlayerController.h"
 #include "WorldPartition/WorldPartition.h"
 #include "WorldPartition/WorldPartitionRuntimeHash.h"
@@ -115,6 +117,18 @@ TSubclassOf<UMapPinWidget> UMinimapBlueprintFunctionLibrary::GetMapPinWidgetClas
     if (UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>())
     {
         return Settings->GetCommonMapPinWidgetClass();
+    }
+    return nullptr;
+}
+
+UMinimapUserSettings* UMinimapBlueprintFunctionLibrary::GetMinimapUserSettings()
+{
+    if (UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>())
+    {
+        if (auto UserSettingsClass = Settings->GetMinimapUserSettingsClass())
+        {
+            return NewObject<UMinimapUserSettings>(Settings, UserSettingsClass);
+        }
     }
     return nullptr;
 }

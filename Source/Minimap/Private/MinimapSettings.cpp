@@ -24,3 +24,8 @@ TSubclassOf<UMapPinWidget> UMinimapSettings::GetCommonMapPinWidgetClass() const
 {
     return CommonMapPinWidget.TryLoadClass<UMapPinWidget>();
 }
+
+TSubclassOf<UMinimapUserSettings> UMinimapSettings::GetMinimapUserSettingsClass() const
+{
+    return MinimapUserSettingsClass.LoadSynchronous();
+}

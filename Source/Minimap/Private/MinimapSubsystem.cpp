@@ -51,7 +51,7 @@ FStaticMapPin UMinimapSubsystem::GetShownMinimapPin(FGuid Guid) const
     
     for (auto RegisteredComp : MinimapComponentRegistry)
     {
-        if (RegisteredComp->MinimapGuid.IsValid())
+        if (RegisteredComp->MinimapGuid.IsValid() && RegisteredComp->ShouldVisible())
         {
             auto StaticPtr = StaticMapPins.IndexOfByPredicate([&](const FStaticMapPin& Pin)
             {
@@ -223,6 +223,12 @@ void UMinimapSubsystem::Tick(float DeltaTime)
     TArray<FGuid> MapPinsGuidArray;
     for (auto Comp : MinimapComponentRegistry)
     {
+        // ignore not visible component.
+        if (!Comp->ShouldVisible())
+        {
+            continue;
+        }
+        
         if (!Comp->bAlwaysShow)
         {
             MapPinsGuidArray.AddUnique(Comp->MinimapGuid);

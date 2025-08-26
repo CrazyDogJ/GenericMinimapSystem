@@ -10,6 +10,8 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapComponentEvent, UMinimapComponent*, Component);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStaticMapPinEvent, const FStaticMapPin&, StaticMapPin);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FShownMapPinEvent, FGuid, Guid);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapUserSettingsChangedEvent, UMinimapUserSettings*, MinimapUserSettings);
+
 /**
  * 
  */
@@ -47,6 +49,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
 	FShownMapPinEvent OnMapPinHideOnMinimap;
+
+	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
+	FMinimapUserSettingsChangedEvent OnMinimapUserSettingsChangedEvent;
+	
 #pragma endregion 
 	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem")
 	UMinimapMapData* CurrentMinimapMapData;

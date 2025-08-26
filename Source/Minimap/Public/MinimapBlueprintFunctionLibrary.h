@@ -41,6 +41,9 @@ public:
 	UFUNCTION(BlueprintPure, Category =	"Widget")
 	static TSubclassOf<UMapPinWidget> GetMapPinWidgetClass();
 
+	UFUNCTION(BlueprintPure, Category = "Minimap")
+	static UMinimapUserSettings* GetMinimapUserSettings();
+
 	UFUNCTION(BlueprintCallable, Category = "Minimap", meta = (WorldContext = "WorldContext"))
 	static bool GetCurrentWorldPartitionLevelName(const UObject* WorldContext, FVector Location, FString& LevelName);
 };

@@ -55,6 +55,11 @@ FStaticMapPin UMinimapComponent::GetCurrentStaticMapPin()
 	return Result;
 }
 
+bool UMinimapComponent::ShouldVisible_Implementation()
+{
+	return true;
+}
+
 APlayerState* UMinimapComponent::GetPlayerState() const
 {
 	if (Cast<APawn>(GetOwner()))

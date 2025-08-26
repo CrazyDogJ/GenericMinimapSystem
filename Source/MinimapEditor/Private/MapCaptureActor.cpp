@@ -30,6 +30,9 @@ AMapCaptureActor::AMapCaptureActor(const FObjectInitializer& ObjectInitializer)
 	bIsEditorOnlyActor = true;
 	SceneComponent->bIsEditorOnly = true;
 	Capture2D->bIsEditorOnly = true;
+
+	RenderTarget = nullptr;
+	Capture2D->TextureTarget = nullptr;
 }
 
 void AMapCaptureActor::CaptureMap()
@@ -144,6 +147,9 @@ void AMapCaptureActor::WriteMapInfo(UMinimapMapData* DataAsset, UTexture2D* Tex)
 
 void AMapCaptureActor::OnConstruction(const FTransform& Transform)
 {
+	RenderTarget = nullptr;
+	Capture2D->TextureTarget = nullptr;
+	
 	EndPoint = FVector(EndPoint.X, EndPoint.X * UKismetMathLibrary::SignOfFloat(EndPoint.Y), 0);
 	Capture2D->SetWorldLocation(FVector(GetActorLocation().X + 0.5 * EndPoint.X, GetActorLocation().Y + 0.5 * EndPoint.Y, GetActorLocation().Z));
 }
