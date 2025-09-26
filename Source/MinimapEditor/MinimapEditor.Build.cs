@@ -21,7 +21,11 @@ public class MinimapEditor : ModuleRules
                 "Slate",
                 "SlateCore", 
                 "EditorScriptingUtilities", 
-                "Minimap"
+                "Minimap",
+                "DetailCustomizations",
+                "InputCore",
+                "UnrealEd",
+                "ComponentVisualizers"
             }
         );
     }

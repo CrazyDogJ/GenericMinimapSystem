@@ -4,6 +4,7 @@
 #include "MinimapBlueprintFunctionLibrary.h"
 
 #include "MinimapUserSettings.h"
+#include "Blueprint/WidgetTree.h"
 #include "GameFramework/PlayerController.h"
 #include "WorldPartition/WorldPartition.h"
 #include "WorldPartition/WorldPartitionRuntimeHash.h"
@@ -171,4 +172,36 @@ bool UMinimapBlueprintFunctionLibrary::GetCurrentWorldPartitionLevelName(const U
     WorldPartitionSubsystem->ForEachWorldPartition(ForEachWpFunction);
 
     return bResult;
+}
+
+UWidget* UMinimapBlueprintFunctionLibrary::FindParentWidgetOfType(UWidget* StartingWidget, TSubclassOf<UWidget> Type)
+{
+    while ( StartingWidget )
+    {
+        UWidget* LocalRoot = StartingWidget;
+        UWidget* LocalParent = LocalRoot->GetParent();
+        while (LocalParent)
+        {
+            if (LocalParent->IsA(Type))
+            {
+                return LocalParent;
+            }
+            LocalRoot = LocalParent;
+            LocalParent = LocalParent->GetParent();
+        }
+
+        UWidgetTree* WidgetTree = Cast<UWidgetTree>(LocalRoot->GetOuter());
+        if ( WidgetTree == nullptr )
+        {
+            break;
+        }
+
+        StartingWidget = Cast<UUserWidget>(WidgetTree->GetOuter());
+        if ( StartingWidget && StartingWidget->IsA(Type) )
+        {
+            return StartingWidget;
+        }
+    }
+
+    return nullptr;
 }

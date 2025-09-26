@@ -4,12 +4,10 @@
 
 void FMinimapEditorModule::StartupModule()
 {
-    
 }
 
 void FMinimapEditorModule::ShutdownModule()
 {
-    
 }
 
 #undef LOCTEXT_NAMESPACE

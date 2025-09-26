@@ -46,4 +46,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Minimap", meta = (WorldContext = "WorldContext"))
 	static bool GetCurrentWorldPartitionLevelName(const UObject* WorldContext, FVector Location, FString& LevelName);
+
+	UFUNCTION(BlueprintCallable, Category= "Minimap", meta=(DeterminesOutputType=Type))
+	static UWidget* FindParentWidgetOfType(UWidget* StartingWidget, TSubclassOf<UWidget> Type);
 };

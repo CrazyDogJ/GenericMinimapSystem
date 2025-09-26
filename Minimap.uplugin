@@ -23,12 +23,16 @@
 		{
 			"Name": "MinimapEditor",
 			"Type": "Editor",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "PostEngineInit"
 		}
 	],
 	"Plugins": [
 		{
 			"Name": "EditorScriptingUtilities",
+			"Enabled": true
+		},
+		{
+			"Name": "ZoneGraph",
 			"Enabled": true
 		}
 	]

@@ -5,7 +5,16 @@
 #include "CoreMinimal.h"
 #include "MinimapMapData.h"
 #include "MinimapStructs.h"
+#include "ZoneGraphTypes.h"
 #include "MinimapSubsystem.generated.h"
+
+USTRUCT(BlueprintType)
+struct FZoneGraphLanePath_BP
+{
+	GENERATED_BODY()
+	
+	FZoneGraphLanePath Path;
+};
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapComponentEvent, UMinimapComponent*, Component);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStaticMapPinEvent, const FStaticMapPin&, StaticMapPin);
@@ -91,6 +100,23 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
 	void SetMinimapRadius(float Radius);
 
+	// Zone Graph helper functions -------------------------------------------------------------------------------------
+	float GetZoneWidthByLaneIndex(const FZoneGraphStorage& ZoneStorage, int32 LaneIndex) const;
+	
+	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
+	int GetPathLaneCount(const FZoneGraphLanePath_BP& Path);
+
+	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
+	bool GetZoneGraphPathBP(FVector StartPosition, FVector DestPosition, FVector SearchExtent, FZoneGraphLanePath_BP& Path);
+
+	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
+	bool GetPathPoints(const FZoneGraphLanePath_BP& Path, TArray<FVector>& PathPoints);
+
+	TArray<FVector> ConvertPathToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLanePath& Path);
+	TArray<FVector> ConvertLaneToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLaneHandle& LaneHandle);
+	TArray<FVector> ConvertLaneToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLaneLocation& InStartLocation, const FZoneGraphLaneLocation& InEndLocation);
+	// Zone Graph helper functions -------------------------------------------------------------------------------------
+	
 	//Helper functions
 	void AddMinimapPin(FGuid Guid);
 	void RemoveMinimapPin(FGuid Guid);
