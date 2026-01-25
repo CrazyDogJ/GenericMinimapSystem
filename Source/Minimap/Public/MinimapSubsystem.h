@@ -71,6 +71,40 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem", meta=(Units = "cm"))
 	float MinimapRadius = 10000.0f;
+
+public:
+	// Nav query for background query.
+	/** Should auto update nav query start location. */
+	UPROPERTY(BlueprintReadWrite, Category = "MinimapSubsystem|Nav Query")
+	bool bAutoUpdateStartLocation = true;
+
+	/** Should do nav query update. */
+	UPROPERTY(BlueprintReadWrite, Category = "MinimapSubsystem|Nav Query")
+	bool bShouldUpdateNavQuery = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem|Nav Query")
+	bool bPathPointsValid = false;
+	
+	UPROPERTY(BlueprintReadWrite, Category = "MinimapSubsystem|Nav Query")
+	FVector NavQueryStartPosition;
+
+	UPROPERTY(BlueprintReadWrite, Category = "MinimapSubsystem|Nav Query")
+	FVector NavQueryEndPosition;
+
+	UPROPERTY(BlueprintReadWrite, Category = "MinimapSubsystem|Nav Query")
+	FVector NavQueryExtend = FVector(10000.0f);
+	
+	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem|Nav Query")
+	TArray<FVector> NavQueryOutPathPoints;
+
+	float NavQueryTime = 0.0f;
+	
+	UPROPERTY(BlueprintReadWrite, Category = "MinimapSubsystem|Nav Query")
+	float NavQueryPeriod = 1.0f;
+
+	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem|Nav Query")
+	bool ShouldShowNavPath() const;
+	// Nav query for background query.
 	
 	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
 	TArray<UMinimapComponent*> GetRegisteredComponents() const;
@@ -101,6 +135,10 @@ public:
 	void SetMinimapRadius(float Radius);
 
 	// Zone Graph helper functions -------------------------------------------------------------------------------------
+	// TODO : These are not so important so we can do these in another thread.
+	/**
+	 * Get zone actor width by lane index
+	 */
 	float GetZoneWidthByLaneIndex(const FZoneGraphStorage& ZoneStorage, int32 LaneIndex) const;
 	
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")

@@ -23,6 +23,11 @@ void UMinimapSubsystem::Deinitialize()
     Super::Deinitialize();
 }
 
+bool UMinimapSubsystem::ShouldShowNavPath() const
+{
+	return bShouldUpdateNavQuery && bPathPointsValid;
+}
+
 TArray<UMinimapComponent*> UMinimapSubsystem::GetRegisteredComponents() const
 {
     TArray<UMinimapComponent*> Result;
@@ -713,7 +718,29 @@ void UMinimapSubsystem::Tick(float DeltaTime)
     {
         return;
     }
-    
+
+	// Should update nav query.
+    if (bShouldUpdateNavQuery)
+    {
+    	// Update nav query start position using local player actor location.
+    	if (bAutoUpdateStartLocation)
+    	{
+    		NavQueryStartPosition = CurrentLocalPlayerActor->GetActorLocation();
+    	}
+    	// Update nav query period. Using task to do async task update.
+    	NavQueryTime += DeltaTime;
+    	if (NavQueryTime >= NavQueryPeriod)
+    	{
+    		NavQueryTime = 0.0f;
+    		UE::Tasks::Launch(UE_SOURCE_LOCATION, [this]()
+			{
+    			FZoneGraphLanePath_BP OutPath;
+    			bPathPointsValid = GetZoneGraphPathBP(NavQueryStartPosition, NavQueryEndPosition, NavQueryExtend, OutPath);
+    			GetPathPoints(OutPath, NavQueryOutPathPoints);
+			});
+    	}
+    }
+	
     // Add pins guid and add always show pin
     TArray<FGuid> MapPinsGuidArray;
     for (auto Comp : MinimapComponentRegistry)

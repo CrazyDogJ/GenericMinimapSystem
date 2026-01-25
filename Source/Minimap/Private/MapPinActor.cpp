@@ -34,6 +34,11 @@ AMapPinActor::AMapPinActor(const FObjectInitializer& ObjectInitializer)
 
 void AMapPinActor::Overlapped(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,int32 OtherBodyIndex,bool bFromSweep,const FHitResult& SweepResult)
 {
+	// Avoid nullptr;
+	if (!OtherActor) return;
+	if (!OtherActor->GetComponentByClass(UMinimapComponent_Player::StaticClass())) return;
+	
+	// Main function;
 	if (Cast<UMinimapComponent_Player>(OtherActor->GetComponentByClass(UMinimapComponent_Player::StaticClass()))->TempPin == this)
 	{
 		Cast<UMinimapComponent_Player>(OtherActor->GetComponentByClass(UMinimapComponent_Player::StaticClass()))->TempPin = nullptr;

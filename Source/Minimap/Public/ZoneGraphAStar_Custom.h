@@ -67,16 +67,16 @@ struct FZoneGraphCustomPathFilter
 	bool IsStart(const FZoneGraphCustomAStarNode& Node) const;
 	bool IsEnd(const FZoneGraphCustomAStarNode& Node) const;
 
-	FORCEINLINE FVector::FReal GetHeuristicScale() const;
+	FVector::FReal GetHeuristicScale() const;
 
 	FVector::FReal GetHeuristicCost(const FZoneGraphCustomAStarNode& NeighbourNode, const FZoneGraphCustomAStarNode& EndNode) const;
 
 	FVector::FReal GetTraversalCost(const FZoneGraphCustomAStarNode& CurNode, const FZoneGraphCustomAStarNode& NeighbourNode) const;
 
-	FORCEINLINE bool IsTraversalAllowed(const FNodeRef StartNodeRef, const FNodeRef& Neighbour) const;
+	bool IsTraversalAllowed(const FNodeRef StartNodeRef, const FNodeRef& Neighbour) const;
 
-	FORCEINLINE bool WantsPartialSolution() const;
-	FORCEINLINE bool ShouldIncludeStartNodeInPath() const;
+	bool WantsPartialSolution() const;
+	bool ShouldIncludeStartNodeInPath() const;
 
 protected:
 	const FZoneGraphStorage& ZoneStorage;

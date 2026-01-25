@@ -21,7 +21,7 @@ private:
 	UPROPERTY()
 	USceneComponent* SceneComponent;
 	
-	UPROPERTY()
+	UPROPERTY(Transient)
 	UTextureRenderTarget2D* RenderTarget;
 public:	
 	// Sets default values for this actor's properties
@@ -34,7 +34,7 @@ public:
 
 	void WriteMapInfo(UMinimapMapData* DataAsset, UTexture2D* Tex);
 	
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 	USceneCaptureComponent2D* Capture2D;
 	
 	UPROPERTY(EditAnywhere)
