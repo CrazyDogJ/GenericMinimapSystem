@@ -7,6 +7,8 @@
 #include "MinimapSettings.h"
 #include "MinimapBlueprintFunctionLibrary.generated.h"
 
+class UMainMapUserWidget;
+class UMinimapComponent_Player;
 class APlayerController;
 /**
  * 
@@ -33,20 +35,17 @@ public:
 	static bool ProjectWorldToScreenBidirectional(APlayerController const* Player, const FVector& WorldPosition, FVector2D& ScreenPosition, bool& bTargetBehindCamera, bool bPlayerViewportRelative = false);
 
 	UFUNCTION(BlueprintPure, Category = "Widget")
-	static TSubclassOf<UUserWidget> GetMinimapWidgetClass();
+	static TSubclassOf<UMinimapUserWidget> GetMinimapWidgetClass();
 
 	UFUNCTION(BlueprintPure, Category = "Widget")
-	static TSubclassOf<UUserWidget> GetMainmapWidgetClass();
-
-	UFUNCTION(BlueprintPure, Category =	"Widget")
-	static TSubclassOf<UMapPinWidget> GetMapPinWidgetClass();
+	static TSubclassOf<UMainMapUserWidget> GetMainmapWidgetClass();
 
 	UFUNCTION(BlueprintPure, Category = "Minimap")
 	static UMinimapUserSettings* GetMinimapUserSettings();
 
-	UFUNCTION(BlueprintCallable, Category = "Minimap", meta = (WorldContext = "WorldContext"))
-	static bool GetCurrentWorldPartitionLevelName(const UObject* WorldContext, FVector Location, FString& LevelName);
-
 	UFUNCTION(BlueprintCallable, Category= "Minimap", meta=(DeterminesOutputType=Type))
 	static UWidget* FindParentWidgetOfType(UWidget* StartingWidget, TSubclassOf<UWidget> Type);
+
+	UFUNCTION(BlueprintCallable, Category = "Minimap")
+	static void UpdateNavQueryEndPoint(UMinimapComponent_Player* LocalPlayerComp);
 };

@@ -35,7 +35,7 @@ public:
 	TArray<FHotPointSaveGame> HotPointSaveGames;
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLocalMinimapChanged, UMinimapMapData*, ChangedMinimapData);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLocalMinimapChanged, const UMinimapMapData*, ChangedMinimapData);
 
 /**
  * 
@@ -143,4 +143,6 @@ protected:
 	virtual void BeginPlay() override;
 
 	virtual void PostLoad() override;
+
+	virtual void NativeGetDisplayNameAndDescription(FText& DisplayName, FText& Description) override;
 };

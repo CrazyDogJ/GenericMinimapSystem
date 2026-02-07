@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "MapHotPointActor.h"
+#include "Actors/MapHotPointActor.h"
 
 #include "Components/BillboardComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -27,9 +27,9 @@ AMapHotPointActor::AMapHotPointActor()
 #endif
 	
 	PrimaryActorTick.bCanEverTick = false;
-	if (!Info.HotPointUniqueID.IsValid())
+	if (!Info.IdentifyGuid.IsValid())
 	{
-		Info.HotPointUniqueID = FGuid::NewGuid();
+		Info.IdentifyGuid = FGuid::NewGuid();
 	}
 }
 
@@ -47,13 +47,13 @@ void AMapHotPointActor::FoundThisMapHotPoint(UMinimapComponent_Player* PlayerCom
 	
 	if (FoundStruct)
 	{
-		FoundStruct->HotPointFoundMap.Add(Info.HotPointUniqueID, true);
+		FoundStruct->HotPointFoundMap.Add(Info.IdentifyGuid, true);
 	}
 	else
 	{
 		auto NewStruct = PlayerComp->HotPointSaveGames.Add(FHotPointSaveGame());
 		PlayerComp->HotPointSaveGames[NewStruct].LevelName = UGameplayStatics::GetCurrentLevelName(GetWorld());
-		PlayerComp->HotPointSaveGames[NewStruct].HotPointFoundMap.Add(Info.HotPointUniqueID, true);
+		PlayerComp->HotPointSaveGames[NewStruct].HotPointFoundMap.Add(Info.IdentifyGuid, true);
 	}
 }
 
@@ -63,9 +63,12 @@ void AMapHotPointActor::OnConstruction(const FTransform& Transform)
 
 	Info.Location = GetActorLocation();
 #if WITH_EDITORONLY_DATA
-	if (Info.HotPointIcon)
+	if (Info.MapPinBrush.GetResourceObject())
 	{
-		BillboardComponent->SetSprite(Info.HotPointIcon);
+		if (const auto Tex = Cast<UTexture2D>(Info.MapPinBrush.GetResourceObject()))
+		{
+			BillboardComponent->SetSprite(Tex);
+		}
 	}
 	else
 	{

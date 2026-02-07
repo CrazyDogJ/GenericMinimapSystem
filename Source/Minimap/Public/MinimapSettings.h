@@ -3,10 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MapPinWidget.h"
 #include "MinimapMapData.h"
 #include "MinimapUserSettings.h"
 #include "MinimapSettings.generated.h"
+
+class UMainMapUserWidget;
+class UMinimapUserWidget;
 
 /**
  * 
@@ -29,12 +31,6 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Minimap Settings")
 	FString MapTexturePath;
 
-	/** Widget class on map pin actor.
-	 * Widget in plugin content folder by default.
-	 */
-	UPROPERTY(Config, EditAnywhere, meta = (MetaClass = "/Script/Minimap.MapPinWidget"), AdvancedDisplay, Category = "Minimap Settings")
-	FSoftClassPath CommonMapPinWidget;
-
 	/** Unique color for multiplayer
 	 * if not found, it will be purple.
 	 */
@@ -46,23 +42,24 @@ public:
 	float ControllerHitResultDistance;
 
 	/** Mini map widget class */
-	UPROPERTY(EditAnywhere, config, meta = (MetaClass = "/Script/UMG.UserWidget"), AdvancedDisplay, Category = "Minimap Settings")
+	UPROPERTY(EditAnywhere, config, meta = (MetaClass = "/Script/Minimap.MinimapUserWidget"), AdvancedDisplay, Category = "Minimap Settings")
 	FSoftClassPath MiniMapWidgetClass;
 
 	/** Main map widget class */
-	UPROPERTY(EditAnywhere, config, meta = (MetaClass = "/Script/UMG.UserWidget"), AdvancedDisplay, Category = "Minimap Settings")
+	UPROPERTY(EditAnywhere, config, meta = (MetaClass = "/Script/Minimap.MainMapUserWidget"), AdvancedDisplay, Category = "Minimap Settings")
 	FSoftClassPath MainMapWidgetClass;
 
 	UPROPERTY(EditAnywhere, Config, AdvancedDisplay, Category = "Minimap Settings")
 	TSoftClassPtr<UMinimapUserSettings> MinimapUserSettingsClass;
 
+	UPROPERTY(EditAnywhere, Config, Category = "Minimap Settings")
+	float NavQueryPeriod = 0.2f;
+	
 	/** Get mini map widget class */
-	TSubclassOf<UUserWidget> GetMinimapWidgetClass() const;
+	TSubclassOf<UMinimapUserWidget> GetMinimapWidgetClass() const;
 
 	/** Get main map widget class */
-	TSubclassOf<UUserWidget> GetMainmapWidgetClass() const;
-
-	TSubclassOf<UMapPinWidget> GetCommonMapPinWidgetClass() const;
+	TSubclassOf<UMainMapUserWidget> GetMainmapWidgetClass() const;
 
 	TSubclassOf<UMinimapUserSettings> GetMinimapUserSettingsClass() const;
 };

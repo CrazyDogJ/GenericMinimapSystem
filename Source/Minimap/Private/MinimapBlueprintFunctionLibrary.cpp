@@ -3,12 +3,11 @@
 
 #include "MinimapBlueprintFunctionLibrary.h"
 
+#include "Actors/MapPinActor.h"
+#include "Components/MinimapComponent_Player.h"
 #include "MinimapUserSettings.h"
 #include "Blueprint/WidgetTree.h"
 #include "GameFramework/PlayerController.h"
-#include "WorldPartition/WorldPartition.h"
-#include "WorldPartition/WorldPartitionRuntimeHash.h"
-#include "WorldPartition/WorldPartitionSubsystem.h"
 
 TMap<FString, TSoftObjectPtr<UMinimapMapData>> UMinimapBlueprintFunctionLibrary::GetMinimapDatas()
 {
@@ -95,7 +94,7 @@ bool UMinimapBlueprintFunctionLibrary::ProjectWorldToScreenBidirectional(APlayer
     return bSuccess;
 }
 
-TSubclassOf<UUserWidget> UMinimapBlueprintFunctionLibrary::GetMinimapWidgetClass()
+TSubclassOf<UMinimapUserWidget> UMinimapBlueprintFunctionLibrary::GetMinimapWidgetClass()
 {
     if (UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>())
     {
@@ -104,20 +103,11 @@ TSubclassOf<UUserWidget> UMinimapBlueprintFunctionLibrary::GetMinimapWidgetClass
     return nullptr;
 }
 
-TSubclassOf<UUserWidget> UMinimapBlueprintFunctionLibrary::GetMainmapWidgetClass()
+TSubclassOf<UMainMapUserWidget> UMinimapBlueprintFunctionLibrary::GetMainmapWidgetClass()
 {
     if (UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>())
     {
         return Settings->GetMainmapWidgetClass();
-    }
-    return nullptr;
-}
-
-TSubclassOf<UMapPinWidget> UMinimapBlueprintFunctionLibrary::GetMapPinWidgetClass()
-{
-    if (UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>())
-    {
-        return Settings->GetCommonMapPinWidgetClass();
     }
     return nullptr;
 }
@@ -132,46 +122,6 @@ UMinimapUserSettings* UMinimapBlueprintFunctionLibrary::GetMinimapUserSettings()
         }
     }
     return nullptr;
-}
-
-bool UMinimapBlueprintFunctionLibrary::GetCurrentWorldPartitionLevelName(const UObject* WorldContext, FVector Location, FString& LevelName)
-{
-    if (!WorldContext)
-    {
-        return false;
-    }
-    
-    const auto WorldPartitionSubsystem = WorldContext->GetWorld()->GetSubsystem<UWorldPartitionSubsystem>();
-    if (!WorldPartitionSubsystem)
-    {
-        return false;
-    }
-
-    bool bResult = false;
-    
-    const auto ForEachCellFunction = [&Location, &LevelName, &bResult](const UWorldPartitionRuntimeCell* Cell) -> bool
-    {
-        if (Cell->GetCellBounds().IsInsideXY(Location))
-        {
-            LevelName = Cell->GetName();
-            bResult = true;
-        }
-        return true;
-    };
-
-    // ReSharper disable once CppParameterMayBeConstPtrOrRef
-    auto ForEachWpFunction = [ForEachCellFunction](UWorldPartition* WorldPartition) -> bool
-    {
-        if (WorldPartition)
-        {
-            WorldPartition->RuntimeHash->ForEachStreamingCells(ForEachCellFunction);
-        }
-        return true;
-    };
-
-    WorldPartitionSubsystem->ForEachWorldPartition(ForEachWpFunction);
-
-    return bResult;
 }
 
 UWidget* UMinimapBlueprintFunctionLibrary::FindParentWidgetOfType(UWidget* StartingWidget, TSubclassOf<UWidget> Type)
@@ -204,4 +154,23 @@ UWidget* UMinimapBlueprintFunctionLibrary::FindParentWidgetOfType(UWidget* Start
     }
 
     return nullptr;
+}
+
+void UMinimapBlueprintFunctionLibrary::UpdateNavQueryEndPoint(UMinimapComponent_Player* LocalPlayerComp)
+{
+    if (LocalPlayerComp)
+    {
+        if (const auto Subsystem = LocalPlayerComp->GetWorld()->GetSubsystem<UMinimapSubsystem>())
+        {
+            if (LocalPlayerComp->TempPin)
+            {
+                Subsystem->NavQueryEndPosition = LocalPlayerComp->TempPin->GetActorLocation();
+                Subsystem->bShouldUpdateNavQuery = true;
+            }
+            else
+            {
+                Subsystem->bShouldUpdateNavQuery = false;
+            }
+        }
+    }
 }

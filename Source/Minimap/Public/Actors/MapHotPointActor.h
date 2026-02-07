@@ -3,8 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MinimapComponent_Player.h"
-#include "MinimapMapData.h"
+#include "Components/MinimapComponent_Player.h"
 #include "GameFramework/Actor.h"
 #include "MapHotPointActor.generated.h"
 

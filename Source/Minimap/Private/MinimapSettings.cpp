@@ -2,6 +2,8 @@
 
 
 #include "MinimapSettings.h"
+#include "Widgets/MinimapUserWidget.h"
+#include "Widgets/MainMapUserWidget.h"
 
 UMinimapSettings::UMinimapSettings(const FObjectInitializer& obj)
 {
@@ -10,19 +12,14 @@ UMinimapSettings::UMinimapSettings(const FObjectInitializer& obj)
     ControllerHitResultDistance = 1000000.f;
 }
 
-TSubclassOf<UUserWidget> UMinimapSettings::GetMinimapWidgetClass() const
+TSubclassOf<UMinimapUserWidget> UMinimapSettings::GetMinimapWidgetClass() const
 {
-    return MiniMapWidgetClass.TryLoadClass<UUserWidget>();
+    return MiniMapWidgetClass.TryLoadClass<UMinimapUserWidget>();
 }
 
-TSubclassOf<UUserWidget> UMinimapSettings::GetMainmapWidgetClass() const
+TSubclassOf<UMainMapUserWidget> UMinimapSettings::GetMainmapWidgetClass() const
 {
-    return MainMapWidgetClass.TryLoadClass<UUserWidget>();
-}
-
-TSubclassOf<UMapPinWidget> UMinimapSettings::GetCommonMapPinWidgetClass() const
-{
-    return CommonMapPinWidget.TryLoadClass<UMapPinWidget>();
+    return MainMapWidgetClass.TryLoadClass<UMainMapUserWidget>();
 }
 
 TSubclassOf<UMinimapUserSettings> UMinimapSettings::GetMinimapUserSettingsClass() const

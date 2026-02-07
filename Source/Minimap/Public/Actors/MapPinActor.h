@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MinimapComponent.h"
+#include "Components/MinimapComponent.h"
 #include "GameFramework/Actor.h"
 #include "Components/SphereComponent.h"
 #include "MapPinActor.generated.h"

@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "GraphAStar.h"
 #include "ZoneGraphTypes.h"
-#include "ZoneGraphQuery.h"
 
 struct FZoneGraphCustomAStarNode;
 

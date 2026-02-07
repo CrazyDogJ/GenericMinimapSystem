@@ -113,7 +113,7 @@ public:
 	TArray<FStaticMapPin> GetRegisteredStaticMapPins() const;
 
 	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
-	FStaticMapPin GetShownMinimapPin(FGuid Guid) const;
+	FStaticMapPin GetShownMinimapPin(FGuid Guid, bool& Success) const;
 
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
 	FGuid AddStaticLocationPin(FStaticMapPin InPin);

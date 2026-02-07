@@ -1,6 +1,6 @@
-﻿#include "NetTypeSplineComponent.h"
+﻿#include "Components/NetTypeSplineComponent.h"
 
-#include "NetTypeSplineActor.h"
+#include "Actors/NetTypeSplineActor.h"
 
 void UNetTypeSplineMetaData::InsertPoint(int32 Index, float t, bool bClosedLoop)
 {

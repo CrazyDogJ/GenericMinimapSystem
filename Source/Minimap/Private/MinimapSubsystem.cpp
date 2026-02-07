@@ -3,15 +3,18 @@
 
 #include "MinimapSubsystem.h"
 
+#include "Components/MinimapComponent.h"
 #include "MinimapSettings.h"
 #include "ZoneGraphAStar_Custom.h"
+#include "ZoneGraphQuery.h"
 #include "ZoneGraphSubsystem.h"
-#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Kismet/GameplayStatics.h"
 
 void UMinimapSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
+
+	NavQueryPeriod = GetDefault<UMinimapSettings>()->NavQueryPeriod;
 }
 
 void UMinimapSubsystem::Deinitialize()
@@ -47,10 +50,11 @@ TArray<FStaticMapPin> UMinimapSubsystem::GetRegisteredStaticMapPins() const
     return StaticMapPins;
 }
 
-FStaticMapPin UMinimapSubsystem::GetShownMinimapPin(FGuid Guid) const
+FStaticMapPin UMinimapSubsystem::GetShownMinimapPin(FGuid Guid, bool& Success) const
 {
     if (!Guid.IsValid())
     {
+    	Success = false;
         return FStaticMapPin();
     }
 
@@ -83,9 +87,11 @@ FStaticMapPin UMinimapSubsystem::GetShownMinimapPin(FGuid Guid) const
 
     if (StaticPtr)
     {
+    	Success = true;
         return *StaticPtr;
     }
-    
+
+	Success = false;
     return FStaticMapPin();
 }
 
@@ -134,16 +140,17 @@ UMinimapMapData* UMinimapSubsystem::GetCurrentMinimapMapData()
         CurrentMinimapMapData = Value->LoadSynchronous();
         for (auto HotPoint : CurrentMinimapMapData->HotPointInfos)
         {
-            FStaticMapPin NewPin = FStaticMapPin(
-                HotPoint.Location,
-                0.0f,
-                UWidgetBlueprintLibrary::MakeBrushFromTexture(HotPoint.HotPointIcon, 32, 32),
-                false,
-                false,
-                false);
-            NewPin.IdentifyGuid = HotPoint.HotPointUniqueID;
-            NewPin.PinName = HotPoint.HotPointName;
-            NewPin.PinDescription = HotPoint.HotPointDescription;
+            FStaticMapPin NewPin;
+        	NewPin.Location = HotPoint.Location;
+        	NewPin.Yaw = 0.0f;
+        	NewPin.MapPinBrush = HotPoint.MapPinBrush;
+            NewPin.IdentifyGuid = HotPoint.IdentifyGuid;
+            NewPin.PinName = HotPoint.PinName;
+            NewPin.PinDescription = HotPoint.PinDescription;
+        	NewPin.CustomMinimapWidgetClass = HotPoint.CustomMinimapWidgetClass;
+        	NewPin.CustomMainmapWidgetClass = HotPoint.CustomMainmapWidgetClass;
+        	NewPin.CustomDatas = HotPoint.CustomDatas;
+        	
             StaticMapPins.AddUnique(NewPin);
         }
         return CurrentMinimapMapData;
@@ -158,7 +165,7 @@ FHotPointInfo UMinimapSubsystem::GetHotPointInfoFromGuid(FGuid Guid)
     {
         auto Ptr = CurrentMinimapMapData->HotPointInfos.FindByPredicate([&] (const FHotPointInfo& HotPoint)
         {
-           return HotPoint.HotPointUniqueID == Guid;
+           return HotPoint.IdentifyGuid == Guid;
         });
 
         if (Ptr)
@@ -775,14 +782,19 @@ void UMinimapSubsystem::Tick(float DeltaTime)
     // Update visible
     for (auto MapPin : MapPinsGuidArray)
     {
-        if (FVector::Dist2D(CurrentLocalPlayerActor->GetActorLocation(), GetShownMinimapPin(MapPin).Location) <= MinimapRadius / 2)
-        {
-            AddMinimapPin(MapPin);
-        }
-        else
-        {
-            RemoveMinimapPin(MapPin);
-        }
+    	bool Success;
+    	const auto MapPinStruct = GetShownMinimapPin(MapPin, Success);
+	    if (Success)
+	    {
+	    	if (FVector::Dist2D(CurrentLocalPlayerActor->GetActorLocation(), MapPinStruct.Location) <= MinimapRadius / 2)
+	    	{
+	    		AddMinimapPin(MapPin);
+	    	}
+	    	else
+	    	{
+	    		RemoveMinimapPin(MapPin);
+	    	}
+	    }
     }
 }
 

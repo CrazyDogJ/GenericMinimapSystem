@@ -4,7 +4,7 @@
 #include "MapCaptureActor.h"
 
 #include "EditorAssetLibrary.h"
-#include "MapHotPointActor.h"
+#include "Actors/MapHotPointActor.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "Components/SceneComponent.h"
 #include "MinimapSettings.h"

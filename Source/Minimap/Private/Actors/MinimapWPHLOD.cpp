@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "MinimapWPHLOD.h"
+#include "Actors/MinimapWPHLOD.h"
 
 #include "PhysicsEngine/BodySetup.h"
 #include "WorldPartition/WorldPartition.h"

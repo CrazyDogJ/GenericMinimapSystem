@@ -1,10 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "MapPinActor.h"
+#include "Actors/MapPinActor.h"
 
-#include "MinimapComponent.h"
-#include "MinimapComponent_Player.h"
+#include "Components/MinimapComponent.h"
+#include "Components/MinimapComponent_Player.h"
 #include "Net/UnrealNetwork.h"
 
 void AMapPinActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

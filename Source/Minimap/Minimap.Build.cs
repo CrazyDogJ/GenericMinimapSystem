@@ -14,6 +14,7 @@ public class Minimap : ModuleRules
 				"Core", 
 				"UMG",
 				"ZoneGraph",
+				"InputCore"
 			}
 			);
 		

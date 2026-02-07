@@ -1,16 +1,16 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "MinimapComponent_Player.h"
+#include "Components/MinimapComponent_Player.h"
 
-#include "GenericTeamAgentInterface.h"
+#include "Actors/MapPinActor.h"
 #include "MinimapSettings.h"
 #include "MinimapSubsystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Engine/Canvas.h"
-#include "Kismet/GameplayStatics.h"
 #include "GameFramework/PlayerState.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "Serialization/ArchiveLoadCompressedProxy.h"
@@ -27,6 +27,7 @@ void UMinimapComponent_Player::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 UMinimapComponent_Player::UMinimapComponent_Player(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
+	TempPin = nullptr;
 	bRotate = true;
 	bAlwaysShow = true;
 
@@ -261,6 +262,14 @@ void UMinimapComponent_Player::PostLoad()
 	OwnerPawn = Cast<APawn>(GetOwner());
 }
 
+void UMinimapComponent_Player::NativeGetDisplayNameAndDescription(FText& DisplayName, FText& Description)
+{
+	if (OwnerPawn && OwnerPawn->GetPlayerState())
+	{
+		DisplayName = FText::FromString(OwnerPawn->GetPlayerState()->GetPlayerName());
+	}
+}
+
 void UMinimapComponent_Player::SetUniqueColorIndex_Implementation()
 {
 	int32 loopIndex = -1;
@@ -354,7 +363,7 @@ bool UMinimapComponent_Player::IsHotPointFound(FHotPointInfo HotPointInfo)
 
 	if (FoundStruct)
 	{
-		if (const auto Ptr = FoundStruct->HotPointFoundMap.Find(HotPointInfo.HotPointUniqueID))
+		if (const auto Ptr = FoundStruct->HotPointFoundMap.Find(HotPointInfo.IdentifyGuid))
 		{
 			return *Ptr;
 		}

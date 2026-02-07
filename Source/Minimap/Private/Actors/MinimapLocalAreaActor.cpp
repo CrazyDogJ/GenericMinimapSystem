@@ -1,7 +1,7 @@
 ﻿
-#include "MinimapLocalAreaActor.h"
+#include "Actors/MinimapLocalAreaActor.h"
 
-#include "MinimapComponent_Player.h"
+#include "Components/MinimapComponent_Player.h"
 #include "Components/BrushComponent.h"
 #include "Components/CapsuleComponent.h"
 

@@ -69,7 +69,11 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent)
 	bool ShouldVisible();
+
+	UFUNCTION(BlueprintNativeEvent)
+	void GetDisplayNameAndDescription(FText& DisplayName, FText& Description);
 	
+	virtual void NativeGetDisplayNameAndDescription(FText& DisplayName, FText& Description) {}
 //helper functions
 public:
 

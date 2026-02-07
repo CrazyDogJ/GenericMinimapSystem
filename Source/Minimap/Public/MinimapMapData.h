@@ -3,40 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameplayTagContainer.h"
 #include "Engine/DataAsset.h"
 #include "MinimapMapData.generated.h"
 
-USTRUCT(BlueprintType)
-struct FHotPointInfo
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
-	FGuid HotPointUniqueID;
-	
-	UPROPERTY(BlueprintReadOnly)
-	FVector Location;
-	
-	UPROPERTY(BlueprintReadOnly, EditAnywhere)
-	FText HotPointName;
-
-	UPROPERTY(BlueprintReadOnly, EditAnywhere)
-	FText HotPointDescription;
-
-	UPROPERTY(BlueprintReadOnly, EditAnywhere)
-	UTexture2D* HotPointIcon;
-
-	UPROPERTY(BlueprintReadOnly, EditAnywhere)
-	FGameplayTag HotPointTag;
-
-	UPROPERTY(BlueprintReadOnly, EditAnywhere)
-	bool bIsTeleportPoint = false;
-
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, meta = (EditCondition = bIsTeleportPoint))
-	FTransform TeleportTransform;
-};
+struct FHotPointInfo;
 
 UCLASS(BlueprintType)
 class MINIMAP_API UMinimapMapData : public UDataAsset

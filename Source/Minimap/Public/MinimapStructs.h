@@ -5,7 +5,10 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "Engine/Datatable.h"
+#include "StructUtils/InstancedStruct.h"
 #include "MinimapStructs.generated.h"
+
+class UMapPinUserWidget;
 
 USTRUCT(BlueprintType)
 struct FMinimapStruct : public FTableRowBase
@@ -32,53 +35,83 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct FStaticMapPin
+struct FMapPinBase
 {
 	GENERATED_BODY()
 
-	FStaticMapPin()
+public:
+	FMapPinBase()
 		: Location(FVector::ZeroVector), MapPinBrush(FSlateBrush())
 	{
 	}
 
-	FStaticMapPin(const FVector& Loc, float Yaw, const FSlateBrush& Brush, bool HasRotation, bool AddOverlay, bool AlwaysOnMinimap)
+	FMapPinBase(const FVector& Loc, float Yaw, const FSlateBrush& Brush, bool HasRotation, bool AddOverlay, bool AlwaysOnMinimap)
 		: Location(Loc), Yaw(Yaw), MapPinBrush(Brush), bHasRotation(HasRotation), bAddToOverlay(AddOverlay), bAlwaysOnMinimap(AlwaysOnMinimap)
 	{
 	}
-
-public:
+	
+	// Unique id
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FGuid IdentifyGuid;
-	
+	// Map pin location
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FVector Location;
-
+	// Map pin yaw angle
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	float Yaw = 0.0f;
-	
+	// Default slate brush
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FSlateBrush MapPinBrush;
-
+	// Category tag for custom usage
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FGameplayTag CategoryTag;
-	
+	// Should rotate.
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	bool bHasRotation = false;
-	
+	// Should add to screen
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	bool bAddToOverlay = false;
-
+	// Should minimap always display
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	bool bAlwaysOnMinimap = false;
-
+	// Map pin name
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FText PinName;
-
+	// Map pin desc
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FText PinDescription;
-	
-	bool operator==(const FStaticMapPin& Other) const
+	// Custom widget for minimap
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	TSubclassOf<UMapPinUserWidget> CustomMinimapWidgetClass;
+	// Custom widget for main map
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	TSubclassOf<UMapPinUserWidget> CustomMainmapWidgetClass;
+	// Custom datas.
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	FInstancedStruct CustomDatas;
+
+	bool operator==(const FMapPinBase& Other) const
 	{
 		return IdentifyGuid == Other.IdentifyGuid;
 	}
+};
+
+USTRUCT(BlueprintType)
+struct FStaticMapPin : public FMapPinBase
+{
+	GENERATED_BODY()
+};
+
+USTRUCT(BlueprintType)
+struct FHotPointInfo : public FMapPinBase
+{
+	GENERATED_BODY()
+
+public:
+	
+	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	bool bIsTeleportPoint = false;
+
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, meta = (EditCondition = bIsTeleportPoint))
+	FTransform TeleportTransform;
 };

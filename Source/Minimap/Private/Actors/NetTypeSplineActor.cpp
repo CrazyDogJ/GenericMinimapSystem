@@ -1,6 +1,6 @@
-﻿#include "NetTypeSplineActor.h"
+﻿#include "Actors/NetTypeSplineActor.h"
 
-#include "NetTypeSplineComponent.h"
+#include "Components/NetTypeSplineComponent.h"
 
 ANetTypeSplineActor::ANetTypeSplineActor(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
