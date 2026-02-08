@@ -8,15 +8,35 @@
 #include "Components/Overlay.h"
 #include "Widgets/MapPinUserWidget.h"
 
+void UMinimapBaseUserWidget::ReleaseSlateResources(bool bReleaseChildren)
+{
+	WidgetPool.ReleaseAllSlateResources();
+	
+	Super::ReleaseSlateResources(bReleaseChildren);
+}
+
+UMinimapBaseUserWidget::UMinimapBaseUserWidget(const FObjectInitializer& Initializer)
+	: Super(Initializer), WidgetPool(*this)
+{
+}
+
 void UMinimapBaseUserWidget::AddMapPin(FGuid Guid)
 {
-	if (const auto Class = GetCustomClass(Guid))
+	const auto Class = GetCustomClass(Guid);
+	if (Class && GetMarkersOverlay())
 	{
-		UMapPinUserWidget* NewMapPin = CreateWidget<UMapPinUserWidget>(GetOwningPlayer(), Class);
-		NewMapPin->Guid = Guid;
-
-		GetMarkersOverlay()->AddChildToOverlay(NewMapPin);
-		Markers.Add(Guid, NewMapPin);
+		WidgetPool.GetOrCreateInstance<UMapPinUserWidget>(Class,
+			[this, Guid](UUserWidget* WidgetObject, const TSharedRef<SWidget>& Content)
+			{
+				if (UMapPinUserWidget* NewMapPin = Cast<UMapPinUserWidget>(WidgetObject))
+				{
+					NewMapPin->Guid = Guid;
+					GetMarkersOverlay()->AddChildToOverlay(NewMapPin);
+					Markers.Add(Guid, NewMapPin);
+				}
+				
+				return SNew(SObjectWidget, WidgetObject)[Content];
+			});
 	}
 }
 
@@ -27,6 +47,7 @@ void UMinimapBaseUserWidget::RemoveMapPin(FGuid Guid)
 		UMapPinUserWidget* MapPin = *Found;
 		MapPin->RemoveFromParent();
 		Markers.Remove(Guid);
+		WidgetPool.Release(MapPin);
 	}
 }
 

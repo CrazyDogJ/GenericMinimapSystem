@@ -132,7 +132,6 @@ void UMainMapUserWidget::NativeConstruct()
 		Slider->SetMinValue(MinScale);
 		Slider->SetMaxValue(MaxScale);
 		Slider->SetValue(Scale);
-		Slider->OnValueChanged.AddDynamic(this, &ThisClass::OnValueChanged);
 	}
 
 	UpdateText();
@@ -232,6 +231,18 @@ FReply UMainMapUserWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, co
 
 void UMainMapUserWidget::ManageEvents(bool bManage)
 {
+	if (const auto Slider = GetSliderWidget())
+	{
+		if (bManage)
+		{
+			Slider->OnValueChanged.AddDynamic(this, &ThisClass::OnValueChanged);
+		}
+		else
+		{
+			Slider->OnValueChanged.RemoveAll(this);
+		}
+	}
+	
 	if (const auto Subsystem = GetMinimapSubsystem())
 	{
 		if (bManage)

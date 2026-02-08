@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "MapPinUserWidget.h"
 #include "Blueprint/UserWidget.h"
+#include "Blueprint/UserWidgetPool.h"
 #include "MinimapBaseUserWidget.generated.h"
 
 class UOverlay;
@@ -16,7 +17,15 @@ UCLASS()
 class MINIMAP_API UMinimapBaseUserWidget : public UUserWidget
 {
 	GENERATED_BODY()
+protected:
+	UPROPERTY(Transient)
+	FUserWidgetPool WidgetPool;
+
+	virtual void ReleaseSlateResources(bool bReleaseChildren) override;
+	
 public:
+	explicit UMinimapBaseUserWidget(const FObjectInitializer& Initializer);
+	
 	void AddMapPin(FGuid Guid);
 	void RemoveMapPin(FGuid Guid);
 
