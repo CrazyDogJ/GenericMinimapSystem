@@ -21,8 +21,6 @@ class MINIMAP_API UMinimapComponent : public UActorComponent
 
 public:	
 
-	UMinimapSubsystem* GetMinimapSubsystem() const;
-
 	// Properties for minimap static pin struct
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Replicated)
 	FGuid MinimapGuid;
@@ -54,18 +52,6 @@ public:
 	//Get properties to struct
 	UFUNCTION(BlueprintPure)
 	FStaticMapPin GetCurrentStaticMapPin();
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void OnCompReg(UMinimapComponent* Component);
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void OnCompUnreg(UMinimapComponent* Component);
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void OnStaticReg(const FStaticMapPin& StaticMapPin);
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void OnStaticUnreg(const FStaticMapPin& StaticMapPin);
 
 	UFUNCTION(BlueprintNativeEvent)
 	bool ShouldVisible();

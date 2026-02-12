@@ -17,6 +17,29 @@ UCLASS()
 class MINIMAP_API UMinimapBlueprintFunctionLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
+
+public:
+	
+	template<typename SubsystemType>
+	static void ForEachLocalPlayerSubsystem(UGameInstance* GameInstance, TFunctionRef<void(SubsystemType*)> Func)
+	{
+		if (!GameInstance)
+		{
+			return;
+		}
+ 
+		for (ULocalPlayer* LocalPlayer : GameInstance->GetLocalPlayers())
+		{
+			if (LocalPlayer)
+			{
+				SubsystemType* Subsystem = LocalPlayer->GetSubsystem<SubsystemType>();
+				if (Subsystem)
+				{
+					Func(Subsystem);
+				}
+			}
+		}
+	}
 	
 public:
 	UFUNCTION(BlueprintPure, Category = "Minimap")
@@ -47,5 +70,5 @@ public:
 	static UWidget* FindParentWidgetOfType(UWidget* StartingWidget, TSubclassOf<UWidget> Type);
 
 	UFUNCTION(BlueprintCallable, Category = "Minimap")
-	static void UpdateNavQueryEndPoint(UMinimapComponent_Player* LocalPlayerComp);
+	static void UpdateNavQueryEndPoint(APlayerController* PlayerController);
 };

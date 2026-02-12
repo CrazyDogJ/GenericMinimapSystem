@@ -10,8 +10,6 @@
 
 void UMinimapUserWidget::NativeConstruct()
 {
-	Super::NativeConstruct();
-
 	if (GetMinimapImageWidget() && GetCurrentMapData())
 	{
 		const auto DynMat = GetMinimapImageWidget()->GetDynamicMaterial();
@@ -29,24 +27,24 @@ void UMinimapUserWidget::NativeConstruct()
 		Subsystem->OnMapPinShowOnMinimap.AddDynamic(this, &ThisClass::OnMarkerShowOnMinimap);
 		Subsystem->OnMapPinHideOnMinimap.AddDynamic(this, &ThisClass::OnMarkerHideOnMinimap);
 	}
+	
+	Super::NativeConstruct();
 }
 
 void UMinimapUserWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
-	Super::NativeTick(MyGeometry, InDeltaTime);
-
 	UpdateInterpRadius(InDeltaTime);
 	UpdateViewAngle();
 	UpdateLocalPlayerAngle();
 	UpdateNorthWidgets();
 	UpdateMarkers();
 	UpdateMinimapImageParameters();
+	
+	Super::NativeTick(MyGeometry, InDeltaTime);
 }
 
 void UMinimapUserWidget::NativeDestruct()
 {
-	Super::NativeDestruct();
-
 	if (const auto MinimapPlayer = GetLocalPlayerMinimapComponent())
 	{
 		MinimapPlayer->OnLocalMinimapChanged.RemoveAll(this);
@@ -56,6 +54,8 @@ void UMinimapUserWidget::NativeDestruct()
 		Subsystem->OnMapPinShowOnMinimap.RemoveAll(this);
 		Subsystem->OnMapPinHideOnMinimap.RemoveAll(this);
 	}
+	
+	Super::NativeDestruct();
 }
 
 TSubclassOf<UMapPinUserWidget> UMinimapUserWidget::GetCustomClass(const FGuid& Guid)

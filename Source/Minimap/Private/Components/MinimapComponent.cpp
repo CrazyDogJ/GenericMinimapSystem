@@ -3,6 +3,7 @@
 
 #include "Components/MinimapComponent.h"
 
+#include "MinimapBlueprintFunctionLibrary.h"
 #include "MinimapSubsystem.h"
 #include "GameFramework/PlayerState.h"
 #include "Net/UnrealNetwork.h"
@@ -28,16 +29,6 @@ void UMinimapComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(UMinimapComponent, bAlwaysShow);
 	DOREPLIFETIME(UMinimapComponent, UniqueColorIndex);
 	DOREPLIFETIME(UMinimapComponent, bAddToOverlay);
-}
-
-UMinimapSubsystem* UMinimapComponent::GetMinimapSubsystem() const
-{
-	if (GetWorld())
-	{
-		return GetWorld()->GetSubsystem<UMinimapSubsystem>();
-	}
-
-	return nullptr;
 }
 
 FStaticMapPin UMinimapComponent::GetCurrentStaticMapPin()
@@ -89,27 +80,31 @@ void UMinimapComponent::BeginPlay()
 	{
 		MinimapGuid = FGuid::NewGuid();
 	}
-	
-	if (UMinimapSubsystem* MinimapSubsystem = GetMinimapSubsystem())
+
+	TArray<UMinimapSubsystem*> Result;
+	for (auto PlayerIt = GetWorld()->GetGameInstance()->GetLocalPlayerIterator(); PlayerIt; ++PlayerIt)
 	{
-		MinimapSubsystem->OnComponentRegistered.AddDynamic(this, &UMinimapComponent::OnCompReg);
-		MinimapSubsystem->OnComponentUnregistered.AddDynamic(this, &UMinimapComponent::OnCompUnreg);
-		MinimapSubsystem->OnStaticRegistered.AddDynamic(this, &UMinimapComponent::OnStaticReg);
-		MinimapSubsystem->OnStaticUnregistered.AddDynamic(this, &UMinimapComponent::OnStaticUnreg);
-		MinimapSubsystem->RegisterComponent(this);
+		const ULocalPlayer* Player = *PlayerIt;
+		const auto MinimapSubsystem = Player->GetSubsystem<UMinimapSubsystem>();
+		Result.Add(MinimapSubsystem);
 	}
+
+	const auto GI = GetWorld()->GetGameInstance();
+	UMinimapBlueprintFunctionLibrary::ForEachLocalPlayerSubsystem
+	<UMinimapSubsystem>(GI, [this](UMinimapSubsystem* Subsystem)
+	{
+		Subsystem->RegisterComponent(this);
+	});
 }
 
 void UMinimapComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (UMinimapSubsystem* MinimapSubsystem = GetMinimapSubsystem())
+	const auto GI = GetWorld()->GetGameInstance();
+	UMinimapBlueprintFunctionLibrary::ForEachLocalPlayerSubsystem
+	<UMinimapSubsystem>(GI, [this](UMinimapSubsystem* Subsystem)
 	{
-		MinimapSubsystem->OnComponentRegistered.RemoveDynamic(this, &UMinimapComponent::OnCompReg);
-		MinimapSubsystem->OnComponentUnregistered.RemoveDynamic(this, &UMinimapComponent::OnCompUnreg);
-		MinimapSubsystem->OnStaticRegistered.RemoveDynamic(this, &UMinimapComponent::OnStaticReg);
-		MinimapSubsystem->OnStaticUnregistered.RemoveDynamic(this, &UMinimapComponent::OnStaticUnreg);
-		MinimapSubsystem->UnregisterComponent(this);
-	}
+		Subsystem->UnregisterComponent(this);
+	});
 	
 	Super::EndPlay(EndPlayReason);
 }

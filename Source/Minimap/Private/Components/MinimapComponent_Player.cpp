@@ -3,9 +3,9 @@
 
 #include "Components/MinimapComponent_Player.h"
 
+#include "EnhancedInputSubsystems.h"
 #include "Actors/MapPinActor.h"
 #include "MinimapSettings.h"
-#include "MinimapSubsystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Engine/Canvas.h"
@@ -15,6 +15,8 @@
 #include "Kismet/KismetRenderingLibrary.h"
 #include "Serialization/ArchiveLoadCompressedProxy.h"
 #include "Serialization/ArchiveSaveCompressedProxy.h"
+#include "Widgets/MainMapUserWidget.h"
+#include "Widgets/MinimapUserWidget.h"
 
 void UMinimapComponent_Player::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -22,6 +24,56 @@ void UMinimapComponent_Player::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 
 	DOREPLIFETIME(UMinimapComponent_Player, TempPinBrush);
 	DOREPLIFETIME(UMinimapComponent_Player, TempPin);
+}
+
+void UMinimapComponent_Player::ReceiveControllerChangedDelegate_Implementation(APawn* Pawn, AController* OldController,
+	AController* NewController)
+{
+	ControllerChanged(NewController);
+}
+
+void UMinimapComponent_Player::ControllerChanged(const AController* NewController)
+{
+	// Avoid crashing!
+	if (!GetWorld()) return;
+	if (!GetWorld()->GetFirstLocalPlayerFromController()) return;
+
+	const auto InputSubsystem = GetWorld()->GetFirstLocalPlayerFromController()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
+	
+	if (NewController && NewController->IsLocalPlayerController())
+	{
+		if (MinimapUserWidgetClass)
+		{
+			const auto LocalPlayerController = Cast<APlayerController>(OwnerPawn->GetController());
+			MinimapUserWidget = CreateWidget<UMinimapUserWidget, APlayerController*>(LocalPlayerController, MinimapUserWidgetClass);
+			MinimapUserWidget->AddToViewport();
+		}
+		CreateAdditionalWidgets();
+		if (InputSubsystem)
+		{
+			const auto Context = InputMappingContext.LoadSynchronous();
+			InputSubsystem->AddMappingContext(Context, 0);
+		}
+	}
+	else
+	{
+		if (MinimapUserWidget)
+		{
+			MinimapUserWidget->RemoveFromParent();
+			MinimapUserWidget = nullptr;
+		}
+		if (MainMapUserWidget)
+		{
+			MainMapUserWidget->RemoveFromParent();
+			MainMapUserWidget = nullptr;
+		}
+		RemoveAdditionalWidgets();
+		if (InputSubsystem)
+		{
+			const auto Context = InputMappingContext.LoadSynchronous();
+			InputSubsystem->RemoveMappingContext(Context);
+		}
+	}
 }
 
 UMinimapComponent_Player::UMinimapComponent_Player(const FObjectInitializer& ObjectInitializer)
@@ -34,6 +86,26 @@ UMinimapComponent_Player::UMinimapComponent_Player(const FObjectInitializer& Obj
 	OwnerPawn = nullptr;
 	RT = nullptr;
 	MaskLoadMaterial = nullptr;
+}
+
+void UMinimapComponent_Player::CreateRenderTarget()
+{
+	RT = UKismetRenderingLibrary::CreateRenderTarget2D(GetWorld(), Resolution, Resolution, RTF_RGBA16f, FLinearColor::Black, false, false);
+}
+
+void UMinimapComponent_Player::SetRenderTarget(const bool bInRenderTarget)
+{
+	bCreateRenderTarget = bInRenderTarget;
+	if (bCreateRenderTarget && !RT)
+	{
+		CreateRenderTarget();
+	}
+
+	if (!bCreateRenderTarget && RT)
+	{
+		RT->ReleaseResource();
+		RT = nullptr;
+	}
 }
 
 void UMinimapComponent_Player::SetCurrentLocalMinimapData(UMinimapMapData* MinimapData)
@@ -62,6 +134,22 @@ void UMinimapComponent_Player::SetCurrentLocalMinimapData(UMinimapMapData* Minim
 //	
 //	return SelfTeamID == CompTeamID;
 //}
+
+UMainMapUserWidget* UMinimapComponent_Player::GetOrCreateMainMapWidget()
+{
+	if (MainMapUserWidget)
+	{
+		return MainMapUserWidget;
+	}
+	
+	if (OwnerPawn && OwnerPawn->IsLocallyControlled() && MainMapUserWidgetClass)
+	{
+		const auto LocalPlayerController = Cast<APlayerController>(OwnerPawn->GetController());
+		MainMapUserWidget = CreateWidget<UMainMapUserWidget, APlayerController*>(LocalPlayerController, MainMapUserWidgetClass);
+	}
+
+	return MainMapUserWidget;
+}
 
 void UMinimapComponent_Player::AddTempPin()
 {
@@ -248,12 +336,40 @@ void UMinimapComponent_Player::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	OwnerPawn = Cast<APawn>(GetOwner());
+	
+	/** TODO : Unique color is not work when subsystem is LocalPlayerSubsystem
 	if (GetOwner()->GetLocalRole() == ROLE_Authority)
 	{
 		SetUniqueColorIndex();
 	}
+	*/
+	
+	// Add widget and input context.
+	if (OwnerPawn)
+	{
+		if (OwnerPawn->IsLocallyControlled())
+		{
+			ControllerChanged(OwnerPawn->GetController());
+		}
+		else
+		{
+			OwnerPawn->ReceiveControllerChangedDelegate.AddDynamic(this, &ThisClass::ReceiveControllerChangedDelegate);
+		}
+	}
+	// Render target.
+	if (bCreateRenderTarget)
+	{
+		RT = UKismetRenderingLibrary::CreateRenderTarget2D(GetWorld(), Resolution, Resolution, RTF_RGBA16f, FLinearColor::Black, false, false);
+	}
+}
 
-	RT = UKismetRenderingLibrary::CreateRenderTarget2D(GetWorld(), Resolution, Resolution, RTF_RGBA16f, FLinearColor::Black, false, false);
+void UMinimapComponent_Player::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	// Remove input context and widget.
+	ControllerChanged(nullptr);
 }
 
 void UMinimapComponent_Player::PostLoad()
@@ -270,6 +386,7 @@ void UMinimapComponent_Player::NativeGetDisplayNameAndDescription(FText& Display
 	}
 }
 
+/** TODO : Unique color is not work when subsystem is LocalPlayerSubsystem
 void UMinimapComponent_Player::SetUniqueColorIndex_Implementation()
 {
 	int32 loopIndex = -1;
@@ -305,6 +422,7 @@ void UMinimapComponent_Player::SetUniqueColorIndex_Implementation()
 		PinSlateBrush.TintColor = FLinearColor(128,0,128);
 	}
 }
+*/
 
 void UMinimapComponent_Player::AddTempPinExec_Implementation(FVector Location)
 {

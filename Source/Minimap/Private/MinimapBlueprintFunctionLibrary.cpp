@@ -156,11 +156,21 @@ UWidget* UMinimapBlueprintFunctionLibrary::FindParentWidgetOfType(UWidget* Start
     return nullptr;
 }
 
-void UMinimapBlueprintFunctionLibrary::UpdateNavQueryEndPoint(UMinimapComponent_Player* LocalPlayerComp)
+void UMinimapBlueprintFunctionLibrary::UpdateNavQueryEndPoint(APlayerController* PlayerController)
 {
-    if (LocalPlayerComp)
+    if (!PlayerController)
     {
-        if (const auto Subsystem = LocalPlayerComp->GetWorld()->GetSubsystem<UMinimapSubsystem>())
+        return;
+    }
+    
+    if (!PlayerController->GetPawn())
+    {
+        return;
+    }
+
+    if (const auto LocalPlayerComp = PlayerController->GetPawn()->GetComponentByClass<UMinimapComponent_Player>())
+    {
+        if (const auto Subsystem = PlayerController->GetLocalPlayer()->GetSubsystem<UMinimapSubsystem>())
         {
             if (LocalPlayerComp->TempPin)
             {

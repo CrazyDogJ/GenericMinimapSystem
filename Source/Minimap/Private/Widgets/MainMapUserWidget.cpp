@@ -125,8 +125,6 @@ void UMainMapUserWidget::UpdateMarkers()
 
 void UMainMapUserWidget::NativeConstruct()
 {
-	Super::NativeConstruct();
-
 	if (const auto Slider = GetSliderWidget())
 	{
 		Slider->SetMinValue(MinScale);
@@ -161,22 +159,24 @@ void UMainMapUserWidget::NativeConstruct()
 
 	ManageEvents(true);
 	SetFocus();
+
+	Super::NativeConstruct();
 }
 
 void UMainMapUserWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
-	Super::NativeTick(MyGeometry, InDeltaTime);
-
 	UpdateDragging();
 	UpdateTransform();
 	UpdateMarkers();
+
+	Super::NativeTick(MyGeometry, InDeltaTime);
 }
 
 void UMainMapUserWidget::NativeDestruct()
 {
-	Super::NativeDestruct();
-
 	ManageEvents(false);
+
+	Super::NativeDestruct();
 }
 
 TSubclassOf<UMapPinUserWidget> UMainMapUserWidget::GetCustomClass(const FGuid& Guid)

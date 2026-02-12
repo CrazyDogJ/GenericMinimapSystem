@@ -22,21 +22,29 @@ UMinimapBaseUserWidget::UMinimapBaseUserWidget(const FObjectInitializer& Initial
 
 void UMinimapBaseUserWidget::AddMapPin(FGuid Guid)
 {
+	bool bConstructCalled = false;
+	const auto Function =
+		[this, Guid, &bConstructCalled](UUserWidget* WidgetObject, const TSharedRef<SWidget>& Content)
+		{
+			if (UMapPinUserWidget* NewMapPin = Cast<UMapPinUserWidget>(WidgetObject))
+			{
+				NewMapPin->Guid = Guid;
+				bConstructCalled = true;
+			}
+			
+			return SNew(SObjectWidget, WidgetObject)[Content];
+		};
+	
 	const auto Class = GetCustomClass(Guid);
 	if (Class && GetMarkersOverlay())
 	{
-		WidgetPool.GetOrCreateInstance<UMapPinUserWidget>(Class,
-			[this, Guid](UUserWidget* WidgetObject, const TSharedRef<SWidget>& Content)
-			{
-				if (UMapPinUserWidget* NewMapPin = Cast<UMapPinUserWidget>(WidgetObject))
-				{
-					NewMapPin->Guid = Guid;
-					GetMarkersOverlay()->AddChildToOverlay(NewMapPin);
-					Markers.Add(Guid, NewMapPin);
-				}
-				
-				return SNew(SObjectWidget, WidgetObject)[Content];
-			});
+		const auto NewPin = WidgetPool.GetOrCreateInstance<UMapPinUserWidget>(Class, Function);
+		if (!bConstructCalled)
+		{
+			NewPin->Guid = Guid;
+		}
+		GetMarkersOverlay()->AddChildToOverlay(NewPin);
+		Markers.Add(Guid, NewPin);
 	}
 }
 
@@ -53,17 +61,12 @@ void UMinimapBaseUserWidget::RemoveMapPin(FGuid Guid)
 
 UMinimapSubsystem* UMinimapBaseUserWidget::GetMinimapSubsystem() const
 {
-	return GetWorld()->GetSubsystem<UMinimapSubsystem>();
+	return GetOwningPlayer()->GetLocalPlayer()->GetSubsystem<UMinimapSubsystem>();
 }
 
 AActor* UMinimapBaseUserWidget::GetLocalPlayerActor() const
 {
-	if (const auto MinimapSubsystem = GetMinimapSubsystem())
-	{
-		return MinimapSubsystem->CurrentLocalPlayerActor;
-	}
-	
-	return nullptr;
+	return GetOwningPlayerPawn();
 }
 
 UMinimapComponent_Player* UMinimapBaseUserWidget::GetLocalPlayerMinimapComponent() const

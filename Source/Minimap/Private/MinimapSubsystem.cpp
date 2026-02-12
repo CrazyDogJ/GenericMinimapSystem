@@ -10,10 +10,42 @@
 #include "ZoneGraphSubsystem.h"
 #include "Kismet/GameplayStatics.h"
 
+UWorld* UMinimapSubsystem::GetTickableGameObjectWorld() const
+{
+	return GetLocalPlayer()->GetWorld();
+}
+
+ETickableTickType UMinimapSubsystem::GetTickableTickType() const
+{
+	// If this is a template or has not been initialized yet, set to never tick and it will be enabled when it is initialized
+	if (IsTemplate() || !bInitialized)
+	{
+		return ETickableTickType::Never;
+	}
+
+	// Otherwise default to conditional
+	return ETickableTickType::Conditional;
+}
+
+bool UMinimapSubsystem::IsAllowedToTick() const
+{
+	// This function is now deprecated and subclasses should implement IsTickable instead
+	// This should never be false because Initialize should always be called before the first tick and Deinitialize cancels the tick
+	ensureMsgf(bInitialized, TEXT("Tickable subsystem %s tried to tick when not initialized! Check for missing Super call"), *GetFullName());
+
+	return bInitialized;
+}
+
 void UMinimapSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
 
+	check(!bInitialized);
+	bInitialized = true;
+
+	// Refresh the tick type after initialization
+	SetTickableTickType(GetTickableTickType());
+	
 	NavQueryPeriod = GetDefault<UMinimapSettings>()->NavQueryPeriod;
 }
 
@@ -23,6 +55,12 @@ void UMinimapSubsystem::Deinitialize()
     StaticMapPins.Empty();
     ShownMapPinsGuids.Empty();
 
+	check(bInitialized);
+	bInitialized = false;
+
+	// Always cancel tick as this is about to be destroyed
+	SetTickableTickType(ETickableTickType::Never);
+	
     Super::Deinitialize();
 }
 
@@ -175,11 +213,6 @@ FHotPointInfo UMinimapSubsystem::GetHotPointInfoFromGuid(FGuid Guid)
     }
 
     return FHotPointInfo();
-}
-
-void UMinimapSubsystem::SetupLocalPlayer(AActor* LocalPlayerPawn)
-{
-    CurrentLocalPlayerActor = LocalPlayerPawn;
 }
 
 void UMinimapSubsystem::SetMinimapRadius(float Radius)
@@ -719,11 +752,15 @@ void UMinimapSubsystem::UnregisterComponent(UMinimapComponent* Component)
 
 void UMinimapSubsystem::Tick(float DeltaTime)
 {
-    Super::Tick(DeltaTime);
-
-    if (!CurrentLocalPlayerActor)
+    if (!GetLocalPlayer()->PlayerController)
     {
         return;
+    }
+
+	const auto LocalPawn = GetLocalPlayer()->PlayerController->GetPawn();
+    if (!LocalPawn)
+    {
+	    return;
     }
 
 	// Should update nav query.
@@ -732,7 +769,7 @@ void UMinimapSubsystem::Tick(float DeltaTime)
     	// Update nav query start position using local player actor location.
     	if (bAutoUpdateStartLocation)
     	{
-    		NavQueryStartPosition = CurrentLocalPlayerActor->GetActorLocation();
+    		NavQueryStartPosition = LocalPawn->GetActorLocation();
     	}
     	// Update nav query period. Using task to do async task update.
     	NavQueryTime += DeltaTime;
@@ -786,7 +823,7 @@ void UMinimapSubsystem::Tick(float DeltaTime)
     	const auto MapPinStruct = GetShownMinimapPin(MapPin, Success);
 	    if (Success)
 	    {
-	    	if (FVector::Dist2D(CurrentLocalPlayerActor->GetActorLocation(), MapPinStruct.Location) <= MinimapRadius / 2)
+	    	if (FVector::Dist2D(LocalPawn->GetActorLocation(), MapPinStruct.Location) <= MinimapRadius / 2)
 	    	{
 	    		AddMinimapPin(MapPin);
 	    	}

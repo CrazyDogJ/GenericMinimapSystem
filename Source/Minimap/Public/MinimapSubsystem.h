@@ -25,12 +25,23 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapUserSettingsChangedEvent, UM
  * 
  */
 UCLASS(DisplayName = "Minimap Subsystem")
-class MINIMAP_API UMinimapSubsystem : public UTickableWorldSubsystem
+class MINIMAP_API UMinimapSubsystem : public ULocalPlayerSubsystem, public FTickableGameObject
 {
 	GENERATED_BODY()
+protected:
+	// FTickableGameObject implementation Begin
+	UWorld* GetTickableGameObjectWorld() const override;
+	virtual ETickableTickType GetTickableTickType() const override;
+	virtual bool IsAllowedToTick() const override final;
+	virtual void Tick(float DeltaTime) override;
+	virtual TStatId GetStatId() const override;
+	// FTickableGameObject implementation End
+	bool IsInitialized() const { return bInitialized; }
+
+private:
+	bool bInitialized = false;
 	
 public:
-	
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
@@ -65,9 +76,6 @@ public:
 #pragma endregion 
 	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem")
 	UMinimapMapData* CurrentMinimapMapData;
-
-	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem")
-	AActor* CurrentLocalPlayerActor;
 
 	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem", meta=(Units = "cm"))
 	float MinimapRadius = 10000.0f;
@@ -126,10 +134,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
 	FHotPointInfo GetHotPointInfoFromGuid(FGuid Guid);
-	
-	// These three functions are used to track nearby map pins.
-	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
-	void SetupLocalPlayer(AActor* LocalPlayerPawn);
 
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
 	void SetMinimapRadius(float Radius);
@@ -162,8 +166,6 @@ public:
 	virtual void RegisterComponent(UMinimapComponent* Component);
 	virtual void UnregisterComponent(UMinimapComponent* Component);
 
-	virtual void Tick(float DeltaTime) override;
-	virtual TStatId GetStatId() const override;
 protected:
 	/* All the Minimap Components currently existing in the world */
 	TArray<TObjectPtr<UMinimapComponent>> MinimapComponentRegistry;

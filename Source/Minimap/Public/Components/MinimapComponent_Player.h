@@ -3,8 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "InputMappingContext.h"
 #include "MinimapComponent.h"
 #include "MinimapComponent_Player.generated.h"
+
+class UMainMapUserWidget;
+class UMinimapUserWidget;
 
 USTRUCT(BlueprintType)
 struct FHotPointSaveGame
@@ -44,10 +48,25 @@ UCLASS(Blueprintable, meta=(BlueprintSpawnableComponent))
 class MINIMAP_API UMinimapComponent_Player : public UMinimapComponent
 {
 	GENERATED_BODY()
-
+	
+public:
+	UMinimapComponent_Player(const FObjectInitializer& ObjectInitializer);
+	
+protected:
+	// If you enter a local minimap area, this will be changed.
+	UPROPERTY(BlueprintReadOnly)
+	UMinimapMapData* CurrentLocalMinimapData = nullptr;
+	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
-	UMinimapComponent_Player(const FObjectInitializer& ObjectInitializer);
+	UFUNCTION(Client, Reliable)
+	void ReceiveControllerChangedDelegate(APawn* Pawn, AController* OldController, AController* NewController);
+	void ControllerChanged(const AController* NewController);
+	
+	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void PostLoad() override;
+	virtual void NativeGetDisplayNameAndDescription(FText& DisplayName, FText& Description) override;
 	
 public:
 	// Properties
@@ -57,36 +76,42 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	APawn* OwnerPawn;
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
-	UTextureRenderTarget2D* RT;
-
-	UPROPERTY(EditDefaultsOnly)
-	int Resolution = 1024;
-
-	UPROPERTY(EditDefaultsOnly)
-	UMaterialInterface* MaskLoadMaterial;
-
-	UPROPERTY(EditDefaultsOnly)
-	FName TexturePropertyName = FName("RT");
-
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FHotPointSaveGame> HotPointSaveGames;
 
 	UPROPERTY(BlueprintReadWrite, Replicated)
 	AMapPinActor* TempPin;
 
-protected:
-	// If you enter a local minimap area, this will be changed.
-	UPROPERTY(BlueprintReadOnly)
-	UMinimapMapData* CurrentLocalMinimapData = nullptr;
-
-	// Functions
-public:
 	UPROPERTY(BlueprintAssignable)
 	FOnLocalMinimapChanged OnLocalMinimapChanged;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
+	UMinimapUserWidget* MinimapUserWidget = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
+	UMainMapUserWidget* MainMapUserWidget = nullptr;
 	
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	TSubclassOf<UMinimapUserWidget> MinimapUserWidgetClass;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	TSubclassOf<UMainMapUserWidget> MainMapUserWidgetClass;
+	
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	TSoftObjectPtr<UInputMappingContext> InputMappingContext = nullptr;
+	
+	// Functions
 	UMinimapMapData* GetCurrentLocalMinimapData() const {return CurrentLocalMinimapData;}
 	void SetCurrentLocalMinimapData(UMinimapMapData* MinimapData);
+	
+	UFUNCTION(BlueprintCallable)
+	UMainMapUserWidget* GetOrCreateMainMapWidget();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void CreateAdditionalWidgets();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void RemoveAdditionalWidgets();
 	
 	/**
 	 * Add temp pin at the mid of screen.
@@ -99,10 +124,12 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void RemoveTempPin_MainMap();
-	
+
+	/** TODO : Unique color is not work when subsystem is LocalPlayerSubsystem
 	UFUNCTION(BlueprintCallable, Server, Reliable)
 	void SetUniqueColorIndex();
-
+	*/
+	
 	void AddTempPinImplement(FVector Location);
 	
 	UFUNCTION(Server, Reliable)
@@ -126,6 +153,31 @@ public:
 	
 	bool GetHitResultAtScreenPosition(const FVector2D ScreenPosition, const ECollisionChannel TraceChannel, const FCollisionQueryParams& CollisionQueryParams, FHitResult& HitResult) const;
 
+#pragma region Render Target
+private:
+	UPROPERTY(EditDefaultsOnly)
+	bool bCreateRenderTarget = false;
+
+	void CreateRenderTarget();
+public:
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
+	UTextureRenderTarget2D* RT;
+
+	UPROPERTY(EditDefaultsOnly)
+	int Resolution = 1024;
+
+	UPROPERTY(EditDefaultsOnly)
+	UMaterialInterface* MaskLoadMaterial;
+
+	UPROPERTY(EditDefaultsOnly)
+	FName TexturePropertyName = FName("RT");
+	
+	UFUNCTION(BlueprintPure)
+	bool GetShouldCreateRenderTarget() const { return bCreateRenderTarget; }
+
+	UFUNCTION(BlueprintCallable)
+	void SetRenderTarget(bool bInRenderTarget = true);
+
 	TArray<uint8> SerializeRenderTargetData (int32& Width, int32& Height) const;
 
 	UFUNCTION(BlueprintCallable)
@@ -139,10 +191,6 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnRenderTargetReceived(UTexture2D* Texture2D);
-protected:
-	virtual void BeginPlay() override;
+#pragma endregion Render Target
 
-	virtual void PostLoad() override;
-
-	virtual void NativeGetDisplayNameAndDescription(FText& DisplayName, FText& Description) override;
 };
