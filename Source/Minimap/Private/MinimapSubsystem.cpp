@@ -46,6 +46,8 @@ void UMinimapSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	// Refresh the tick type after initialization
 	SetTickableTickType(GetTickableTickType());
 	
+	FCoreUObjectDelegates::PreLoadMap.AddUObject(this, &ThisClass::PreLoadMap);
+	
 	NavQueryPeriod = GetDefault<UMinimapSettings>()->NavQueryPeriod;
 }
 
@@ -176,6 +178,8 @@ UMinimapMapData* UMinimapSubsystem::GetCurrentMinimapMapData()
     if (auto Value = Settings->MapsInfos.Find(UGameplayStatics::GetCurrentLevelName(GetWorld())))
     {
         CurrentMinimapMapData = Value->LoadSynchronous();
+    	// Update virtual texture.
+    	CurrentMinimapMapData->MapTexture->UpdateResource();
         for (auto HotPoint : CurrentMinimapMapData->HotPointInfos)
         {
             FStaticMapPin NewPin;
@@ -838,4 +842,12 @@ void UMinimapSubsystem::Tick(float DeltaTime)
 TStatId UMinimapSubsystem::GetStatId() const
 {
     RETURN_QUICK_DECLARE_CYCLE_STAT(UMinimapSubsystem, STATGROUP_Tickables);
+}
+
+void UMinimapSubsystem::PreLoadMap(const FString& String)
+{
+	MinimapComponentRegistry.Empty();
+	StaticMapPins.Empty();
+	ShownMapPinsGuids.Empty();
+	CurrentMinimapMapData = nullptr;
 }

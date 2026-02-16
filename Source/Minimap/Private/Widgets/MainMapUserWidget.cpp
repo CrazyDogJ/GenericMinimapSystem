@@ -99,6 +99,13 @@ void UMainMapUserWidget::UpdateTransform() const
 		Root->SetRenderTransformPivot((LocalSize / 2 - Offset) / LocalSize);
 	}
 
+	// TODO : Try to make virtual texture work.
+	// if (const auto MapImage = GetImageWidget())
+	// {
+	// 	MapImage->SetDesiredSizeOverride(FVector2D(1024 * SquareScale, 1024 * SquareScale));
+	// 	MapImage->SetRenderScale(FVector2D(1) / FVector2D(SquareScale));
+	// }
+	
 	if (const auto MarkersOverlay = GetMarkersOverlay())
 	{
 		MarkersOverlay->SetRenderScale(FVector2D(1) / FVector2D(SquareScale));
@@ -175,6 +182,13 @@ void UMainMapUserWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 void UMainMapUserWidget::NativeDestruct()
 {
 	ManageEvents(false);
+	// Clear widgets on destruct.
+	for (auto Itr : Markers)
+	{
+		Itr.Value->RemoveFromParent();
+		WidgetPool.Release(Itr.Value);
+	}
+	Markers.Empty();
 
 	Super::NativeDestruct();
 }

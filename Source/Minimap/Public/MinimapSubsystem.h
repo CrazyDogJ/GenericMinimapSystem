@@ -37,6 +37,7 @@ protected:
 	virtual TStatId GetStatId() const override;
 	// FTickableGameObject implementation End
 	bool IsInitialized() const { return bInitialized; }
+	void PreLoadMap(const FString& String);
 
 private:
 	bool bInitialized = false;
