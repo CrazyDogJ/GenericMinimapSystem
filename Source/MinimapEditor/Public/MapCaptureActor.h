@@ -12,6 +12,14 @@ class USceneComponent;
 class UTextureRenderTarget2D;
 class UMinimapSettings;
 
+struct FTileCaptureResult
+{
+	int32 TileX;
+	int32 TileY;
+	int32 Size;
+	TArray<FColor> Pixels;
+};
+
 UCLASS()
 class MINIMAPEDITOR_API AMapCaptureActor : public AActor
 {
@@ -21,8 +29,6 @@ private:
 	UPROPERTY()
 	USceneComponent* SceneComponent;
 	
-	UPROPERTY(Transient)
-	UTextureRenderTarget2D* RenderTarget;
 public:	
 	// Sets default values for this actor's properties
 	AMapCaptureActor(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
@@ -36,9 +42,18 @@ public:
 	
 	UPROPERTY(EditAnywhere)
 	USceneCaptureComponent2D* Capture2D;
+
+	UPROPERTY(EditAnywhere)
+	int32 TilePower = 10;
+
+	UPROPERTY(VisibleAnywhere)
+	int32 TileSize = 1024;
 	
 	UPROPERTY(EditAnywhere)
-	int32 TextureScale = 2048;
+	int32 Power = 12;
+	
+	UPROPERTY(VisibleAnywhere)
+	int32 TextureScale = 4096;
 
 	UPROPERTY(EditAnywhere, meta = (MakeEditWidget))
 	FVector EndPoint = FVector(5,5,0);
