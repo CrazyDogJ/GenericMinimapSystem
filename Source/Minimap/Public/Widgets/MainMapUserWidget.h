@@ -107,8 +107,11 @@ public:
 	FVector GetCaptureCenter() const;
 
 	UFUNCTION(BlueprintPure, Category = "Minimap")
-	FVector2D WorldToWidget(FVector2D InWorldPosition2D) const;
+	FVector2D WorldToWidget(FVector2D InWorldPosition2D, const float& InScale) const;
 
 	UFUNCTION(BlueprintPure, Category = "Minimap")
 	FVector2D WidgetToWorld(FVector2D InLocalVector2D) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Minimap")
+	void LocalPawnCenter();
 };

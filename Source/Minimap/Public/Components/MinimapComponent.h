@@ -51,8 +51,14 @@ public:
 
 	//Get properties to struct
 	UFUNCTION(BlueprintPure)
-	FStaticMapPin GetCurrentStaticMapPin();
+	FStaticMapPin GetCurrentStaticMapPin() const;
 
+	UFUNCTION(BlueprintPure)
+	TArray<FStaticMapPin> GetRegisteredStaticMapPins() const;
+
+	UFUNCTION(BlueprintPure)
+	TArray<UMinimapComponent*> GetRegisteredMinimapComponents() const;
+	
 	UFUNCTION(BlueprintNativeEvent)
 	bool ShouldVisible();
 

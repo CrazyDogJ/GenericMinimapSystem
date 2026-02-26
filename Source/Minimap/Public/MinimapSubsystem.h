@@ -18,36 +18,22 @@ struct FZoneGraphLanePath_BP
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapComponentEvent, UMinimapComponent*, Component);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStaticMapPinEvent, const FStaticMapPin&, StaticMapPin);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FShownMapPinEvent, FGuid, Guid);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapUserSettingsChangedEvent, UMinimapUserSettings*, MinimapUserSettings);
 
 /**
  * 
  */
 UCLASS(DisplayName = "Minimap Subsystem")
-class MINIMAP_API UMinimapSubsystem : public ULocalPlayerSubsystem, public FTickableGameObject
+class MINIMAP_API UMinimapSubsystem : public UWorldSubsystem
 {
 	GENERATED_BODY()
-protected:
-	// FTickableGameObject implementation Begin
-	UWorld* GetTickableGameObjectWorld() const override;
-	virtual ETickableTickType GetTickableTickType() const override;
-	virtual bool IsAllowedToTick() const override final;
-	virtual void Tick(float DeltaTime) override;
-	virtual TStatId GetStatId() const override;
-	// FTickableGameObject implementation End
-	bool IsInitialized() const { return bInitialized; }
-	void PreLoadMap(const FString& String);
-
-private:
-	bool bInitialized = false;
 	
-public:
+	friend class UMinimapComponent;
+protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	friend class UMinimapComponent;
-
+public:
 #pragma region Delegate
 	/* Called when actor with Minimap Component appears in the world */
 	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
@@ -66,63 +52,18 @@ public:
 	FStaticMapPinEvent OnStaticUnregistered;
 
 	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
-	FShownMapPinEvent OnMapPinShowOnMinimap;
-
-	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
-	FShownMapPinEvent OnMapPinHideOnMinimap;
-
-	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
 	FMinimapUserSettingsChangedEvent OnMinimapUserSettingsChangedEvent;
 	
 #pragma endregion 
 	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem")
 	UMinimapMapData* CurrentMinimapMapData;
 
-	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem", meta=(Units = "cm"))
-	float MinimapRadius = 10000.0f;
-
 public:
-	// Nav query for background query.
-	/** Should auto update nav query start location. */
-	UPROPERTY(BlueprintReadWrite, Category = "MinimapSubsystem|Nav Query")
-	bool bAutoUpdateStartLocation = true;
-
-	/** Should do nav query update. */
-	UPROPERTY(BlueprintReadWrite, Category = "MinimapSubsystem|Nav Query")
-	bool bShouldUpdateNavQuery = false;
-
-	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem|Nav Query")
-	bool bPathPointsValid = false;
-	
-	UPROPERTY(BlueprintReadWrite, Category = "MinimapSubsystem|Nav Query")
-	FVector NavQueryStartPosition;
-
-	UPROPERTY(BlueprintReadWrite, Category = "MinimapSubsystem|Nav Query")
-	FVector NavQueryEndPosition;
-
-	UPROPERTY(BlueprintReadWrite, Category = "MinimapSubsystem|Nav Query")
-	FVector NavQueryExtend = FVector(10000.0f);
-	
-	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem|Nav Query")
-	TArray<FVector> NavQueryOutPathPoints;
-
-	float NavQueryTime = 0.0f;
-	
-	UPROPERTY(BlueprintReadWrite, Category = "MinimapSubsystem|Nav Query")
-	float NavQueryPeriod = 1.0f;
-
-	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem|Nav Query")
-	bool ShouldShowNavPath() const;
-	// Nav query for background query.
-	
 	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
 	TArray<UMinimapComponent*> GetRegisteredComponents() const;
-
+	
 	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
 	TArray<FStaticMapPin> GetRegisteredStaticMapPins() const;
-
-	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
-	FStaticMapPin GetShownMinimapPin(FGuid Guid, bool& Success) const;
 
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
 	FGuid AddStaticLocationPin(FStaticMapPin InPin);
@@ -136,33 +77,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
 	FHotPointInfo GetHotPointInfoFromGuid(FGuid Guid);
 
-	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
-	void SetMinimapRadius(float Radius);
-
-	// Zone Graph helper functions -------------------------------------------------------------------------------------
-	// TODO : These are not so important so we can do these in another thread.
-	/**
-	 * Get zone actor width by lane index
-	 */
-	float GetZoneWidthByLaneIndex(const FZoneGraphStorage& ZoneStorage, int32 LaneIndex) const;
-	
-	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
-	int GetPathLaneCount(const FZoneGraphLanePath_BP& Path);
-
-	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
-	bool GetZoneGraphPathBP(FVector StartPosition, FVector DestPosition, FVector SearchExtent, FZoneGraphLanePath_BP& Path);
-
-	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
-	bool GetPathPoints(const FZoneGraphLanePath_BP& Path, TArray<FVector>& PathPoints);
-
-	TArray<FVector> ConvertPathToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLanePath& Path);
-	TArray<FVector> ConvertLaneToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLaneHandle& LaneHandle);
-	TArray<FVector> ConvertLaneToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLaneLocation& InStartLocation, const FZoneGraphLaneLocation& InEndLocation);
-	// Zone Graph helper functions -------------------------------------------------------------------------------------
-	
-	//Helper functions
-	void AddMinimapPin(FGuid Guid);
-	void RemoveMinimapPin(FGuid Guid);
+	UFUNCTION(BlueprintPure)
+	FStaticMapPin GetShownMinimapPin(FGuid Guid, bool& Success) const;
 	
 	virtual void RegisterComponent(UMinimapComponent* Component);
 	virtual void UnregisterComponent(UMinimapComponent* Component);
@@ -173,7 +89,4 @@ protected:
 
 	/* All the static map pins in the world*/
 	TArray<FStaticMapPin> StaticMapPins;
-
-	/* All map pins shows on minimap */
-	TArray<FGuid> ShownMapPinsGuids;
 };

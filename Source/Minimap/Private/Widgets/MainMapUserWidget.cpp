@@ -98,13 +98,6 @@ void UMainMapUserWidget::UpdateTransform() const
 		const auto LocalSize = Root->GetCachedGeometry().GetLocalSize();
 		Root->SetRenderTransformPivot((LocalSize / 2 - Offset) / LocalSize);
 	}
-
-	// TODO : Try to make virtual texture work.
-	// if (const auto MapImage = GetImageWidget())
-	// {
-	// 	MapImage->SetDesiredSizeOverride(FVector2D(1024 * SquareScale, 1024 * SquareScale));
-	// 	MapImage->SetRenderScale(FVector2D(1) / FVector2D(SquareScale));
-	// }
 	
 	if (const auto MarkersOverlay = GetMarkersOverlay())
 	{
@@ -122,7 +115,7 @@ void UMainMapUserWidget::UpdateMarkers()
 			const auto Found = Subsystem->GetShownMinimapPin(Marker.Key, bSuccess);
 			if (bSuccess)
 			{
-				Marker.Value->SetRenderTranslation(WorldToWidget(FVector2D(Found.Location)));
+				Marker.Value->SetRenderTranslation(WorldToWidget(FVector2D(Found.Location), Scale));
 				Marker.Value->SetRenderTransformAngle(Found.bHasRotation ? Found.Yaw : 0.0f);
 				Marker.Value->SetVisibility(IsMapPinVisible(Marker.Key) ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
 			}
@@ -309,7 +302,7 @@ FVector UMainMapUserWidget::GetCaptureCenter() const
 	return FVector::ZeroVector;
 }
 
-FVector2D UMainMapUserWidget::WorldToWidget(const FVector2D InWorldPosition2D) const
+FVector2D UMainMapUserWidget::WorldToWidget(const FVector2D InWorldPosition2D, const float& InScale) const
 {
 	const auto CurrentData = GetCurrentGlobalMapData();
 	const auto MapImage = GetImageWidget();
@@ -318,7 +311,7 @@ FVector2D UMainMapUserWidget::WorldToWidget(const FVector2D InWorldPosition2D) c
 		FVector2D Dir;
 		float Length;
 		(InWorldPosition2D - FVector2D(GetCaptureCenter())).ToDirectionAndLength(Dir, Length);
-		const FVector2D FinalVector = Dir * (Length / CurrentData->MapSize * MapImage->GetDesiredSize().X * FMath::Square(Scale));
+		const FVector2D FinalVector = Dir * (Length / CurrentData->MapSize * MapImage->GetDesiredSize().X * FMath::Square(InScale));
 		return FVector2D(FinalVector.Y, -FinalVector.X);
 	}
 
@@ -336,4 +329,13 @@ FVector2D UMainMapUserWidget::WidgetToWorld(FVector2D InLocalVector2D) const
 	}
 	
 	return FVector2D();
+}
+
+void UMainMapUserWidget::LocalPawnCenter()
+{
+	if (LocalPawn)
+	{
+		const auto WidgetOffset = WorldToWidget(FVector2D(LocalPawn->GetActorLocation()), 1.0f);
+		Offset = -WidgetOffset;
+	}
 }

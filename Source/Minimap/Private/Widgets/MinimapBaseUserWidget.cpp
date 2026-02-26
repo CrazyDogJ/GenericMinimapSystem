@@ -61,17 +61,12 @@ void UMinimapBaseUserWidget::RemoveMapPin(FGuid Guid)
 
 UMinimapSubsystem* UMinimapBaseUserWidget::GetMinimapSubsystem() const
 {
-	if (!GetOwningPlayer() || !GetOwningPlayer()->GetLocalPlayer())
-	{
-		return nullptr;
-	}
-	
-	return GetOwningPlayer()->GetLocalPlayer()->GetSubsystem<UMinimapSubsystem>();
+	return GetWorld()->GetSubsystem<UMinimapSubsystem>();
 }
 
 AActor* UMinimapBaseUserWidget::GetLocalPlayerActor() const
 {
-	return GetOwningPlayerPawn();
+	return LocalPawn;
 }
 
 UMinimapComponent_Player* UMinimapBaseUserWidget::GetLocalPlayerMinimapComponent() const

@@ -46,6 +46,7 @@ void UMinimapComponent_Player::ControllerChanged(const AController* NewControlle
 		{
 			const auto LocalPlayerController = Cast<APlayerController>(OwnerPawn->GetController());
 			MinimapUserWidget = CreateWidget<UMinimapUserWidget, APlayerController*>(LocalPlayerController, MinimapUserWidgetClass);
+			MinimapUserWidget->LocalPawn = OwnerPawn;
 			MinimapUserWidget->AddToViewport();
 		}
 		CreateAdditionalWidgets();
@@ -79,6 +80,9 @@ void UMinimapComponent_Player::ControllerChanged(const AController* NewControlle
 UMinimapComponent_Player::UMinimapComponent_Player(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = true;
+	
 	TempPin = nullptr;
 	bRotate = true;
 	bAlwaysShow = true;
@@ -86,6 +90,9 @@ UMinimapComponent_Player::UMinimapComponent_Player(const FObjectInitializer& Obj
 	OwnerPawn = nullptr;
 	RT = nullptr;
 	MaskLoadMaterial = nullptr;
+	
+	NavQueryStartPosition = FVector::Zero();
+	NavQueryEndPosition = FVector::Zero();
 }
 
 void UMinimapComponent_Player::CreateRenderTarget()
@@ -146,6 +153,7 @@ UMainMapUserWidget* UMinimapComponent_Player::GetOrCreateMainMapWidget()
 	{
 		const auto LocalPlayerController = Cast<APlayerController>(OwnerPawn->GetController());
 		MainMapUserWidget = CreateWidget<UMainMapUserWidget, APlayerController*>(LocalPlayerController, MainMapUserWidgetClass);
+		MainMapUserWidget->LocalPawn = OwnerPawn;
 	}
 
 	return MainMapUserWidget;
@@ -223,7 +231,7 @@ void UMinimapComponent_Player::RemoveTempPin_MainMap()
 	RemoveTempPinExec();
 }
 
-void UMinimapComponent_Player::AddTempPinImplement(FVector Location)
+void UMinimapComponent_Player::AddTempPinImplement(const FVector& Location)
 {
 	FActorSpawnParameters spawnInfo;
 	spawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
@@ -336,6 +344,7 @@ void UMinimapComponent_Player::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	NavQueryPeriod = GetDefault<UMinimapSettings>()->NavQueryPeriod;
 	OwnerPawn = Cast<APawn>(GetOwner());
 	
 	/** TODO : Unique color is not work when subsystem is LocalPlayerSubsystem
@@ -362,6 +371,31 @@ void UMinimapComponent_Player::BeginPlay()
 	{
 		RT = UKismetRenderingLibrary::CreateRenderTarget2D(GetWorld(), Resolution, Resolution, RTF_RGBA16f, FLinearColor::Black, false, false);
 	}
+
+	if (const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>())
+	{
+		Subsystem->OnStaticRegistered.AddDynamic(this, &ThisClass::OnStaticRegistered);
+		Subsystem->OnStaticUnregistered.AddDynamic(this, &ThisClass::OnStaticUnregistered);
+		Subsystem->OnComponentUnregistered.AddDynamic(this, &ThisClass::OnComponentUnregistered);
+	}
+}
+
+void UMinimapComponent_Player::TickComponent(float DeltaTime, enum ELevelTick TickType,
+	FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (OwnerPawn)
+	{
+		if (const auto Controller = OwnerPawn->GetController())
+		{
+			if (Controller->IsLocalController())
+			{
+				UpdateNavPath(DeltaTime);
+				UpdateMinimapShownPins();
+			}
+		}
+	}
 }
 
 void UMinimapComponent_Player::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -370,6 +404,8 @@ void UMinimapComponent_Player::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	// Remove input context and widget.
 	ControllerChanged(nullptr);
+
+	ShownMapPinsGuids.Empty();
 }
 
 void UMinimapComponent_Player::PostLoad()
@@ -488,4 +524,101 @@ bool UMinimapComponent_Player::IsHotPointFound(FHotPointInfo HotPointInfo)
 	}
 	
 	return false;
+}
+
+void UMinimapComponent_Player::SetMinimapRadius(const float Radius)
+{
+	MinimapRadius = Radius;
+}
+
+void UMinimapComponent_Player::OnStaticRegistered(const FStaticMapPin& StaticMapPin)
+{
+	if (StaticMapPin.bAlwaysOnMinimap)
+	{
+		AddMinimapPin(StaticMapPin.IdentifyGuid);
+	}
+}
+
+void UMinimapComponent_Player::OnStaticUnregistered(const FStaticMapPin& StaticMapPin)
+{
+	RemoveMinimapPin(StaticMapPin.IdentifyGuid);
+}
+
+void UMinimapComponent_Player::OnComponentUnregistered(UMinimapComponent* Component)
+{
+	RemoveMinimapPin(Component->MinimapGuid);
+}
+
+void UMinimapComponent_Player::UpdateMinimapShownPins()
+{
+	// Add pins guid and add always show pin
+	const auto StaticMapPins = GetRegisteredStaticMapPins();
+	const auto MinimapComponentRegistry = GetRegisteredMinimapComponents();
+	
+	TArray<FGuid> MapPinsGuidArray;
+	for (auto Comp : MinimapComponentRegistry)
+	{
+		// ignore not visible component.
+		if (!Comp->ShouldVisible())
+		{
+			continue;
+		}
+        
+		if (!Comp->bAlwaysShow)
+		{
+			MapPinsGuidArray.AddUnique(Comp->MinimapGuid);
+		}
+		else if (Comp->bIsIndividual)
+		{
+			AddMinimapPin(Comp->MinimapGuid);
+		}
+	}
+	for (auto Pin : StaticMapPins)
+	{
+		if (!Pin.bAlwaysOnMinimap)
+		{
+			MapPinsGuidArray.AddUnique(Pin.IdentifyGuid);
+		}
+		else
+		{
+			AddMinimapPin(Pin.IdentifyGuid);
+		}
+	}
+    
+	// Update visible
+	for (auto MapPin : MapPinsGuidArray)
+	{
+		bool Success;
+		const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>();
+		const auto MapPinStruct = Subsystem->GetShownMinimapPin(MapPin, Success);
+		if (Success)
+		{
+			if (FVector::Dist2D(GetOwner()->GetActorLocation(), MapPinStruct.Location) <= MinimapRadius / 2)
+			{
+				AddMinimapPin(MapPin);
+			}
+			else
+			{
+				RemoveMinimapPin(MapPin);
+			}
+		}
+	}
+}
+
+void UMinimapComponent_Player::AddMinimapPin(FGuid Guid)
+{
+	if (ShownMapPinsGuids.Find(Guid) < 0)
+	{
+		ShownMapPinsGuids.Add(Guid);
+		OnMapPinShowOnMinimap.Broadcast(Guid);
+	}
+}
+
+void UMinimapComponent_Player::RemoveMinimapPin(FGuid Guid)
+{
+	if (ShownMapPinsGuids.Find(Guid) >= 0)
+	{
+		OnMapPinHideOnMinimap.Broadcast(Guid);
+		ShownMapPinsGuids.Remove(Guid);
+	}
 }

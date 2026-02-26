@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "MinimapSettings.h"
+#include "Components/Widget.h"
 #include "MinimapBlueprintFunctionLibrary.generated.h"
 
 class UMainMapUserWidget;
@@ -18,29 +19,6 @@ class MINIMAP_API UMinimapBlueprintFunctionLibrary : public UBlueprintFunctionLi
 {
 	GENERATED_BODY()
 
-public:
-	
-	template<typename SubsystemType>
-	static void ForEachLocalPlayerSubsystem(UGameInstance* GameInstance, TFunctionRef<void(SubsystemType*)> Func)
-	{
-		if (!GameInstance)
-		{
-			return;
-		}
- 
-		for (ULocalPlayer* LocalPlayer : GameInstance->GetLocalPlayers())
-		{
-			if (LocalPlayer)
-			{
-				SubsystemType* Subsystem = LocalPlayer->GetSubsystem<SubsystemType>();
-				if (Subsystem)
-				{
-					Func(Subsystem);
-				}
-			}
-		}
-	}
-	
 public:
 	UFUNCTION(BlueprintPure, Category = "Minimap")
 	static TMap<FString, TSoftObjectPtr<UMinimapMapData>> GetMinimapDatas();
@@ -68,7 +46,4 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category= "Minimap", meta=(DeterminesOutputType=Type))
 	static UWidget* FindParentWidgetOfType(UWidget* StartingWidget, TSubclassOf<UWidget> Type);
-
-	UFUNCTION(BlueprintCallable, Category = "Minimap")
-	static void UpdateNavQueryEndPoint(APlayerController* PlayerController);
 };

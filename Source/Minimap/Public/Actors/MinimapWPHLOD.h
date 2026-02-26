@@ -18,4 +18,7 @@ public:
 	virtual void PreRegisterAllComponents() override;
 
 	virtual void PreSave(FObjectPreSaveContext SaveContext) override;
+
+	// Update collision avoid something world.
+	virtual void SetVisibility(bool bIsVisible) override;
 };

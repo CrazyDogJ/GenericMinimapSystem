@@ -19,13 +19,16 @@ void UMinimapUserWidget::NativeConstruct()
 	if (const auto MinimapPlayer = GetLocalPlayerMinimapComponent())
 	{
 		MinimapPlayer->OnLocalMinimapChanged.AddDynamic(this, &ThisClass::OnLocalMapDataChanged);
-	}
-	if (const auto Subsystem = GetMinimapSubsystem())
-	{
-		Subsystem->SetMinimapRadius(DefaultRadius);
+		MinimapPlayer->SetMinimapRadius(DefaultRadius);
+		// Initializing pins.
+		for (const auto Itr : MinimapPlayer->GetShownMapPins())
+		{
+			OnMarkerShowOnMinimap(Itr);
+		}
 		InterpRadius = DefaultRadius;
-		Subsystem->OnMapPinShowOnMinimap.AddDynamic(this, &ThisClass::OnMarkerShowOnMinimap);
-		Subsystem->OnMapPinHideOnMinimap.AddDynamic(this, &ThisClass::OnMarkerHideOnMinimap);
+		// Binding events.
+		MinimapPlayer->OnMapPinShowOnMinimap.AddDynamic(this, &ThisClass::OnMarkerShowOnMinimap);
+		MinimapPlayer->OnMapPinHideOnMinimap.AddDynamic(this, &ThisClass::OnMarkerHideOnMinimap);
 	}
 	
 	Super::NativeConstruct();
@@ -48,11 +51,8 @@ void UMinimapUserWidget::NativeDestruct()
 	if (const auto MinimapPlayer = GetLocalPlayerMinimapComponent())
 	{
 		MinimapPlayer->OnLocalMinimapChanged.RemoveAll(this);
-	}
-	if (const auto Subsystem = GetMinimapSubsystem())
-	{
-		Subsystem->OnMapPinShowOnMinimap.RemoveAll(this);
-		Subsystem->OnMapPinHideOnMinimap.RemoveAll(this);
+		MinimapPlayer->OnMapPinShowOnMinimap.RemoveAll(this);
+		MinimapPlayer->OnMapPinHideOnMinimap.RemoveAll(this);
 	}
 	
 	Super::NativeDestruct();
@@ -76,9 +76,9 @@ TSubclassOf<UMapPinUserWidget> UMinimapUserWidget::GetCustomClass(const FGuid& G
 
 void UMinimapUserWidget::OnLocalMapDataChanged(const UMinimapMapData* ChangedMinimapData)
 {
-	if (const auto MinimapSubsystem = GetMinimapSubsystem())
+	if (const auto LocalComp = GetLocalPlayerMinimapComponent())
 	{
-		MinimapSubsystem->SetMinimapRadius(GetMinimapDisplayRadius());
+		LocalComp->SetMinimapRadius(GetMinimapDisplayRadius());
 	}
 }
 
@@ -100,10 +100,10 @@ void UMinimapUserWidget::OnMarkerShowOnMinimap(FGuid Guid)
 void UMinimapUserWidget::UpdateInterpRadius(const float DeltaTime)
 {
 	const auto CurrentMapData = GetCurrentMapData();
-	const auto Subsystem = GetMinimapSubsystem();
-	if (CurrentMapData && Subsystem)
+	const auto LocalComp = GetLocalPlayerMinimapComponent();
+	if (CurrentMapData && LocalComp)
 	{
-		InterpRadius = FMath::FInterpTo(InterpRadius, Subsystem->MinimapRadius, DeltaTime, InterpSpeed);
+		InterpRadius = FMath::FInterpTo(InterpRadius, LocalComp->MinimapRadius, DeltaTime, InterpSpeed);
 		ZoomMultiplier = GetCurrentMapData()->MapSize / InterpRadius;
 	}
 }

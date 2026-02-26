@@ -3,7 +3,6 @@
 
 #include "MinimapBlueprintFunctionLibrary.h"
 
-#include "Actors/MapPinActor.h"
 #include "Components/MinimapComponent_Player.h"
 #include "MinimapUserSettings.h"
 #include "Blueprint/WidgetTree.h"
@@ -154,33 +153,4 @@ UWidget* UMinimapBlueprintFunctionLibrary::FindParentWidgetOfType(UWidget* Start
     }
 
     return nullptr;
-}
-
-void UMinimapBlueprintFunctionLibrary::UpdateNavQueryEndPoint(APlayerController* PlayerController)
-{
-    if (!PlayerController)
-    {
-        return;
-    }
-    
-    if (!PlayerController->GetPawn())
-    {
-        return;
-    }
-
-    if (const auto LocalPlayerComp = PlayerController->GetPawn()->GetComponentByClass<UMinimapComponent_Player>())
-    {
-        if (const auto Subsystem = PlayerController->GetLocalPlayer()->GetSubsystem<UMinimapSubsystem>())
-        {
-            if (LocalPlayerComp->TempPin)
-            {
-                Subsystem->NavQueryEndPosition = LocalPlayerComp->TempPin->GetActorLocation();
-                Subsystem->bShouldUpdateNavQuery = true;
-            }
-            else
-            {
-                Subsystem->bShouldUpdateNavQuery = false;
-            }
-        }
-    }
 }

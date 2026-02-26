@@ -20,16 +20,16 @@ public:
 	FString LevelName = FString(TEXT("Level Name Here"));
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	UTexture2D* MapTexture;
+	UTexture2D* MapTexture = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	float MapSize;
+	float MapSize = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	float TextureSize;
+	float TextureSize = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	FVector CaptureActorLocation;
+	FVector CaptureActorLocation = FVector::ZeroVector;
 
 	bool IsValid() const;
 };

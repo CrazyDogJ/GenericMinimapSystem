@@ -3,7 +3,6 @@
 
 #include "MinimapUserSettings.h"
 
-#include "MinimapBlueprintFunctionLibrary.h"
 #include "MinimapSubsystem.h"
 
 void UMinimapUserSettings::K2_SaveConfig(UObject* WorldContextObject)
@@ -14,10 +13,8 @@ void UMinimapUserSettings::K2_SaveConfig(UObject* WorldContextObject)
 		return;
 	}
 
-	const auto GI = WorldContextObject->GetWorld()->GetGameInstance();
-	UMinimapBlueprintFunctionLibrary::ForEachLocalPlayerSubsystem
-	<UMinimapSubsystem>(GI, [this](UMinimapSubsystem* Subsystem)
+	if (const auto Subsystem = WorldContextObject->GetWorld()->GetSubsystem<UMinimapSubsystem>())
 	{
 		Subsystem->OnMinimapUserSettingsChangedEvent.Broadcast(this);
-	});
+	}
 }

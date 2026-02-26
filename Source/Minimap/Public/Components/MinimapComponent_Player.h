@@ -33,12 +33,13 @@ public:
 	bool bHasTempPin = false;
 	
 	UPROPERTY(SaveGame, BlueprintReadOnly)
-	FVector TempPinLocation;
+	FVector TempPinLocation = FVector::ZeroVector;
 
 	UPROPERTY(SaveGame, BlueprintReadOnly)
 	TArray<FHotPointSaveGame> HotPointSaveGames;
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FShownMapPinEvent, FGuid, Guid);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLocalMinimapChanged, const UMinimapMapData*, ChangedMinimapData);
 
 /**
@@ -64,6 +65,7 @@ protected:
 	void ControllerChanged(const AController* NewController);
 	
 	virtual void BeginPlay() override;
+	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void PostLoad() override;
 	virtual void NativeGetDisplayNameAndDescription(FText& DisplayName, FText& Description) override;
@@ -130,7 +132,7 @@ public:
 	void SetUniqueColorIndex();
 	*/
 	
-	void AddTempPinImplement(FVector Location);
+	void AddTempPinImplement(const FVector& Location);
 	
 	UFUNCTION(Server, Reliable)
 	void AddTempPinExec(FVector Location);
@@ -193,4 +195,98 @@ public:
 	void OnRenderTargetReceived(UTexture2D* Texture2D);
 #pragma endregion Render Target
 
+#pragma region Nav Query
+public:
+	// Nav query for background query.
+	/** Should auto update nav query start location. */
+	UPROPERTY(BlueprintReadWrite, Category = "Nav Query")
+	bool bAutoUpdateStartLocation = true;
+
+	/** Should do nav query update. */
+	UPROPERTY(BlueprintReadWrite, Category = "Nav Query")
+	bool bShouldUpdateNavQuery = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Nav Query")
+	bool bPathPointsValid = false;
+	
+	UPROPERTY(BlueprintReadWrite, Category = "Nav Query")
+	FVector NavQueryStartPosition;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Nav Query")
+	FVector NavQueryEndPosition;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Nav Query")
+	FVector NavQueryExtend = FVector(10000.0f);
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Nav Query")
+	TArray<FVector> NavQueryOutPathPoints;
+
+	float NavQueryTime = 0.0f;
+	
+	UPROPERTY(BlueprintReadWrite, Category = "Nav Query")
+	float NavQueryPeriod = 1.0f;
+
+	UFUNCTION(BlueprintPure, Category = "Nav Query")
+	bool ShouldShowNavPath() const;
+
+	void UpdateNavPath(const float& DeltaTime);
+	// Nav query for background query.
+
+	// Zone Graph helper functions -------------------------------------------------------------------------------------
+	// TODO : These are not so important so we can do these in another thread.
+	/**
+	 * Get zone actor width by lane index
+	 */
+	float GetZoneWidthByLaneIndex(const FZoneGraphStorage& ZoneStorage, int32 LaneIndex) const;
+	
+	UFUNCTION(BlueprintCallable)
+	int GetPathLaneCount(const FZoneGraphLanePath_BP& Path);
+
+	UFUNCTION(BlueprintCallable)
+	bool GetZoneGraphPathBP(FVector StartPosition, FVector DestPosition, FVector SearchExtent, FZoneGraphLanePath_BP& Path);
+
+	UFUNCTION(BlueprintCallable)
+	bool GetPathPoints(const FZoneGraphLanePath_BP& Path, TArray<FVector>& PathPoints);
+
+	TArray<FVector> ConvertPathToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLanePath& Path);
+	TArray<FVector> ConvertLaneToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLaneHandle& LaneHandle);
+	TArray<FVector> ConvertLaneToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLaneLocation& InStartLocation, const FZoneGraphLaneLocation& InEndLocation);
+	// Zone Graph helper functions -------------------------------------------------------------------------------------
+#pragma endregion Nav Query
+
+#pragma region Minimap Widget
+public:
+	UPROPERTY(BlueprintReadOnly, meta=(Units = "cm"))
+	float MinimapRadius = 10000.0f;
+
+	UPROPERTY(BlueprintAssignable)
+	FShownMapPinEvent OnMapPinShowOnMinimap;
+
+	UPROPERTY(BlueprintAssignable)
+	FShownMapPinEvent OnMapPinHideOnMinimap;
+
+	UFUNCTION(BlueprintCallable)
+	void SetMinimapRadius(float Radius);
+
+	//Helper functions
+	TArray<FGuid> GetShownMapPins() const { return ShownMapPinsGuids; }
+	void AddMinimapPin(FGuid Guid);
+	void RemoveMinimapPin(FGuid Guid);
+	
+protected:
+	/* All map pins shows on minimap */
+	TArray<FGuid> ShownMapPinsGuids;
+
+	UFUNCTION()
+	void OnStaticRegistered(const FStaticMapPin& StaticMapPin);
+
+	UFUNCTION()
+	void OnStaticUnregistered(const FStaticMapPin& StaticMapPin);
+	
+	UFUNCTION()
+	void OnComponentUnregistered(UMinimapComponent* Component);
+    	
+	void UpdateMinimapShownPins();
+	
+#pragma endregion Minimap Widget
 };

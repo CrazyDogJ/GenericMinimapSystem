@@ -29,6 +29,9 @@ public:
 	void AddMapPin(FGuid Guid);
 	void RemoveMapPin(FGuid Guid);
 
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Minimap|State")
+	APawn* LocalPawn;
+	
 	virtual TSubclassOf<UMapPinUserWidget> GetCustomClass(const FGuid& Guid) { return MarkerWidgetClass; }
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Minimap|Settings")

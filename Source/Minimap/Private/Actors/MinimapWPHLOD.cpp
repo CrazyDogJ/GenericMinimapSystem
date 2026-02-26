@@ -101,3 +101,13 @@ void AMinimapWPHLOD::PreSave(FObjectPreSaveContext SaveContext)
 	});
 }
 #endif
+
+void AMinimapWPHLOD::SetVisibility(bool bIsVisible)
+{
+	Super::SetVisibility(bIsVisible);
+
+	ForEachComponent<UPrimitiveComponent>(false, [this, bIsVisible](UPrimitiveComponent* PrimitiveComponent)
+	{
+		PrimitiveComponent->SetCollisionEnabled(bIsVisible ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+	});
+}

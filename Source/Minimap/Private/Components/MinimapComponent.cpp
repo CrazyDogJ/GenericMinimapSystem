@@ -3,7 +3,6 @@
 
 #include "Components/MinimapComponent.h"
 
-#include "MinimapBlueprintFunctionLibrary.h"
 #include "MinimapSubsystem.h"
 #include "GameFramework/PlayerState.h"
 #include "Net/UnrealNetwork.h"
@@ -31,7 +30,7 @@ void UMinimapComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(UMinimapComponent, bAddToOverlay);
 }
 
-FStaticMapPin UMinimapComponent::GetCurrentStaticMapPin()
+FStaticMapPin UMinimapComponent::GetCurrentStaticMapPin() const
 {
 	FStaticMapPin Result;
 	Result.IdentifyGuid = MinimapGuid;
@@ -44,6 +43,24 @@ FStaticMapPin UMinimapComponent::GetCurrentStaticMapPin()
 	Result.MapPinBrush = PinSlateBrush;
 	//TODO:Name and description;
 	return Result;
+}
+
+TArray<FStaticMapPin> UMinimapComponent::GetRegisteredStaticMapPins() const
+{
+	if (const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>())
+	{
+		return Subsystem->GetRegisteredStaticMapPins();
+	}
+	return TArray<FStaticMapPin>();
+}
+
+TArray<UMinimapComponent*> UMinimapComponent::GetRegisteredMinimapComponents() const
+{
+	if (const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>())
+	{
+		return Subsystem->GetRegisteredComponents();
+	}
+	return TArray<UMinimapComponent*>();
 }
 
 bool UMinimapComponent::ShouldVisible_Implementation()
@@ -81,30 +98,18 @@ void UMinimapComponent::BeginPlay()
 		MinimapGuid = FGuid::NewGuid();
 	}
 
-	TArray<UMinimapSubsystem*> Result;
-	for (auto PlayerIt = GetWorld()->GetGameInstance()->GetLocalPlayerIterator(); PlayerIt; ++PlayerIt)
-	{
-		const ULocalPlayer* Player = *PlayerIt;
-		const auto MinimapSubsystem = Player->GetSubsystem<UMinimapSubsystem>();
-		Result.Add(MinimapSubsystem);
-	}
-
-	const auto GI = GetWorld()->GetGameInstance();
-	UMinimapBlueprintFunctionLibrary::ForEachLocalPlayerSubsystem
-	<UMinimapSubsystem>(GI, [this](UMinimapSubsystem* Subsystem)
+	if (const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>())
 	{
 		Subsystem->RegisterComponent(this);
-	});
+	}
 }
 
 void UMinimapComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	const auto GI = GetWorld()->GetGameInstance();
-	UMinimapBlueprintFunctionLibrary::ForEachLocalPlayerSubsystem
-	<UMinimapSubsystem>(GI, [this](UMinimapSubsystem* Subsystem)
+	if (const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>())
 	{
 		Subsystem->UnregisterComponent(this);
-	});
+	}
 	
 	Super::EndPlay(EndPlayReason);
 }
