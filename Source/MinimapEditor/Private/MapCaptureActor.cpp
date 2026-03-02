@@ -3,8 +3,6 @@
 
 #include "MapCaptureActor.h"
 
-#include "AssetToolsModule.h"
-#include "EditorAssetLibrary.h"
 #include "ImageUtils.h"
 #include "Actors/MapHotPointActor.h"
 #include "Components/SceneCaptureComponent2D.h"
@@ -42,11 +40,8 @@ bool ReadRenderTargetPixels(UTextureRenderTarget2D* RT, TArray<FColor>& OutPixel
 
 	FTextureRenderTargetResource* RTResource = RT->GameThread_GetRenderTargetResource();
 	if (!RTResource) return false;
-
-	FReadSurfaceDataFlags ReadFlags;
-	ReadFlags.SetLinearToGamma(true);
-
-	return RTResource->ReadPixels(OutPixels, ReadFlags);
+	
+	return RTResource->ReadPixels(OutPixels);
 }
 
 void CopyTileToFinal(const FTileCaptureResult& Tile, int32 FinalSize, TArray<FColor>& FinalPixels)
@@ -77,43 +72,16 @@ void StitchTiles(const TArray<FTileCaptureResult>& Tiles, int32 TilesPerAxis, in
 	}
 }
 
-void SaveTextureAsset(UTexture2D* Texture, const FString& InName)
-{
-	if (!Texture)
-	{
-		return;
-	}
- 
-	FString PackageName, AssetName;
-	FAssetToolsModule& AssetToolsModule = FAssetToolsModule::GetModule();
-	AssetToolsModule.Get().CreateUniqueAssetName(InName, TEXT(""), PackageName, AssetName);
- 
-	UPackage* Package = CreatePackage(*PackageName);
-	Texture->Rename(*AssetName, Package);
-	Texture->SetFlags(RF_Public | RF_Standalone);
-	Texture->VirtualTextureStreaming = true;
- 
-	FAssetRegistryModule::AssetCreated(Texture);
- 
-	Package->MarkPackageDirty();
- 
-	if (GEditor)
-	{
-		UEditorAssetSubsystem* AssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
-		AssetSubsystem->SaveLoadedAsset(Texture);
-	}
-}
-
 void AMapCaptureActor::CaptureMap()
 {
-#if WITH_EDITOR
+	TilePositions.Empty();
+	
 	// Setup something.
 	const int32 TilesPerAxis = TextureScale / TileSize;
 	const float TileWorldSize = EndPoint.X / TilesPerAxis;
 
 	// Loop capture.
 	Capture2D->OrthoWidth = EndPoint.X / TilesPerAxis;
-	TArray<FTileCaptureResult> AllTiles;
 	for (int32 y = 0; y < TilesPerAxis; y++)
 	{
 		for (int32 x = 0; x < TilesPerAxis; x++)
@@ -122,95 +90,11 @@ void AMapCaptureActor::CaptureMap()
 				+ GetActorRightVector() * (x + 0.5f) * TileWorldSize
 				+ GetActorForwardVector() * (y + 0.5f) * TileWorldSize;
 
-			Capture2D->SetWorldLocation(WorldPos);
-			Capture2D->CaptureScene();
-			
-			FTileCaptureResult Tile;
-			Tile.TileX = x;
-			Tile.TileY = TilesPerAxis - 1 - y;
-			Tile.Size = TileSize;
-
-			ReadRenderTargetPixels(Capture2D->TextureTarget, Tile.Pixels);
-			AllTiles.Add(Tile);
+			TilePositions.Add(FIntPoint(x, y), WorldPos);
 		}
 	}
 
-	// Stitch
-	TArray<FColor> FinalPixels;
-	int32 FinalSize;
-	StitchTiles(AllTiles, TilesPerAxis, TileSize, FinalPixels, FinalSize);
-
-	// Get texture name.
-	FString TexName = FString(TEXT("T_")) + MapName;
-	UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>();
-	FString TotalFileName = FPaths::Combine(Settings->MapTexturePath, TexName);
-
-	// Get path and try to delete outdated map texture.
-	FAssetRegistryModule* const AssetRegistryModule = FModuleManager::Get().GetModulePtr<FAssetRegistryModule>("AssetRegistry");
-	if (!AssetRegistryModule)
-	{
-		return;
-	}
-	const IAssetRegistry& AssetRegistry = AssetRegistryModule->Get();
-	TArray<FAssetData> outData;
-	AssetRegistry.GetAssetsByPath(FName(*Settings->MapTexturePath), outData);
-	for (auto data : outData)
-	{
-		if (data.AssetName.ToString() == TexName)
-		{
-			UEditorAssetLibrary::DeleteAsset(TotalFileName);
-		}
-	}
-
-	// Create texture object.
-	UTexture2D* NewTexture = FImageUtils::CreateTexture2D(
-		FinalSize,
-		FinalSize,
-		FinalPixels,
-		this,
-		TexName,
-		RF_Public | RF_Standalone,
-		FCreateTexture2DParameters()
-	);
-
-	SaveTextureAsset(NewTexture, TotalFileName);
-	
-	if (auto Value = Settings->MapsInfos.Find(MapName))
-	{
-		if (UMinimapMapData* MapData = Value->LoadSynchronous())
-		{
-			WriteMapInfo(MapData, NewTexture);
-			// ReSharper disable once CppExpressionWithoutSideEffects
-			MapData->MarkPackageDirty();
-		}
-	}
-	else
-	{
-		Settings->LoadConfig(UMinimapSettings::StaticClass(), *Settings->GetDefaultConfigFilename());
-		FString AssetPath = Settings->MapTexturePath + "DA_" + MapName;
-		FString AssetName = "DA_" + MapName;
-		UPackage* Package = CreatePackage(*AssetPath);
-		if (UMinimapMapData* NewMapInfo = NewObject<UMinimapMapData>(Package, *AssetName, RF_Public | RF_Standalone))
-		{
-			WriteMapInfo(NewMapInfo, NewTexture);
-		}
-		// save mapper class
-		FString const PackageName = Package->GetName();
-		FString const PackageFileName = FPackageName::LongPackageNameToFilename(PackageName, FPackageName::GetAssetPackageExtension());
-
-		FSavePackageArgs SaveArgs;
-		SaveArgs.TopLevelFlags = RF_Standalone;
-		SaveArgs.SaveFlags = SAVE_NoError;
-		UPackage::SavePackage(Package, nullptr, *PackageFileName, SaveArgs);
-		
-		auto SoftRef = TSoftObjectPtr<UMinimapMapData>(FSoftObjectPath(AssetPath + "." + AssetName));
-		if (!bLocalMap)
-		{
-			Settings->MapsInfos.Add(UGameplayStatics::GetCurrentLevelName(GetWorld()), SoftRef);
-			Settings->SaveConfig(CPF_Config, *Settings->GetDefaultConfigFilename());
-		}
-	}
-#endif  
+	StartCapture();
 }
 
 void AMapCaptureActor::SaveMapInfo(UMinimapMapData* NewDataAsset, const FString& Path, const FString& Name)
@@ -249,6 +133,144 @@ void AMapCaptureActor::WriteMapInfo(UMinimapMapData* DataAsset, UTexture2D* Tex)
 			DataAsset->HotPointInfos.Add(Point->Info);
 		}
 	}
+}
+
+void AMapCaptureActor::StartCapture()
+{
+	AllTiles.Empty();
+	CurrentTileIndex = 0;
+	CaptureNextTile();
+}
+
+void AMapCaptureActor::CaptureNextTile()
+{
+	const int32 TilesPerAxis = TextureScale / TileSize;
+	const auto Array = TilePositions.Array();
+	if (Array.IsValidIndex(CurrentTileIndex))
+	{
+		const auto TilePos = Array[CurrentTileIndex];
+		Capture2D->SetWorldLocation(TilePos.Value);
+		Capture2D->CaptureScene();
+			
+		FTileCaptureResult Tile;
+		Tile.TileX = TilePos.Key.X;
+		Tile.TileY = TilesPerAxis - 1 - TilePos.Key.Y;
+		Tile.Size = TileSize;
+
+		ReadRenderTargetPixels(Capture2D->TextureTarget, Tile.Pixels);
+		AllTiles.Add(Tile);
+	}
+	
+	CurrentTileIndex++;
+	if (CurrentTileIndex == Array.Num())
+	{
+		CaptureFinished();
+	}
+	else
+	{
+		CaptureNextTile();
+		// GetWorld()->GetTimerManager().SetTimerForNextTick(this, &ThisClass::CaptureNextTile);
+	}
+}
+
+void AMapCaptureActor::CaptureFinished()
+{
+	const int32 TilesPerAxis = TextureScale / TileSize;
+	
+	// Stitch
+	TArray<FColor> FinalPixels;
+	int32 FinalSize;
+	StitchTiles(AllTiles, TilesPerAxis, TileSize, FinalPixels, FinalSize);
+
+	// Get texture name.
+	FString TexName = FString(TEXT("T_")) + MapName;
+	UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>();
+	FString TotalFileName = FPaths::Combine(Settings->MapTexturePath, TexName);
+
+	// Get path and try to delete outdated map texture.
+	// FAssetRegistryModule* const AssetRegistryModule = FModuleManager::Get().GetModulePtr<FAssetRegistryModule>("AssetRegistry");
+	// if (!AssetRegistryModule)
+	// {
+	// 	return;
+	// }
+	// const IAssetRegistry& AssetRegistry = AssetRegistryModule->Get();
+	// TArray<FAssetData> outData;
+	// AssetRegistry.GetAssetsByPath(FName(*Settings->MapTexturePath), outData);
+	// for (auto data : outData)
+	// {
+	// 	if (data.AssetName.ToString() == TexName)
+	// 	{
+	// 		UEditorAssetLibrary::DeleteAsset(TotalFileName);
+	// 	}
+	// }
+
+	FCreateTexture2DParameters CreateTexture2DParameters = FCreateTexture2DParameters();
+	CreateTexture2DParameters.bVirtualTexture = true;
+	
+	// Find or create package.
+	UPackage* MapTexturePackage = CreatePackage(*TotalFileName);
+	MapTexturePackage->FullyLoad();
+	MapTexturePackage->Modify();
+	
+	// Create texture object.
+	UTexture2D* NewTexture = FImageUtils::CreateTexture2D(
+		FinalSize,
+		FinalSize,
+		FinalPixels,
+		MapTexturePackage,
+		TexName,
+		RF_Public | RF_Standalone,
+		CreateTexture2DParameters
+	);
+	
+	FAssetRegistryModule::AssetCreated(NewTexture);
+ 
+	// ReSharper disable once CppExpressionWithoutSideEffects
+	MapTexturePackage->MarkPackageDirty();
+ 
+	if (GEditor)
+	{
+		UEditorAssetSubsystem* AssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
+		AssetSubsystem->SaveLoadedAsset(NewTexture);
+	}
+	
+	if (auto Value = Settings->MapsInfos.Find(MapName))
+	{
+		if (UMinimapMapData* MapData = Value->LoadSynchronous())
+		{
+			WriteMapInfo(MapData, NewTexture);
+			// ReSharper disable once CppExpressionWithoutSideEffects
+			MapData->MarkPackageDirty();
+		}
+	}
+	else
+	{
+		Settings->LoadConfig(UMinimapSettings::StaticClass(), *Settings->GetDefaultConfigFilename());
+		FString AssetPath = Settings->MapTexturePath + "DA_" + MapName;
+		FString AssetName = "DA_" + MapName;
+		UPackage* Package = CreatePackage(*AssetPath);
+		if (UMinimapMapData* NewMapInfo = NewObject<UMinimapMapData>(Package, *AssetName, RF_Public | RF_Standalone))
+		{
+			WriteMapInfo(NewMapInfo, NewTexture);
+		}
+		// save mapper class
+		FString const PackageName = Package->GetName();
+		FString const PackageFileName = FPackageName::LongPackageNameToFilename(PackageName, FPackageName::GetAssetPackageExtension());
+
+		FSavePackageArgs SaveArgs;
+		SaveArgs.TopLevelFlags = RF_Standalone;
+		SaveArgs.SaveFlags = SAVE_NoError;
+		UPackage::SavePackage(Package, nullptr, *PackageFileName, SaveArgs);
+		
+		auto SoftRef = TSoftObjectPtr<UMinimapMapData>(FSoftObjectPath(AssetPath + "." + AssetName));
+		if (!bLocalMap)
+		{
+			Settings->MapsInfos.Add(UGameplayStatics::GetCurrentLevelName(GetWorld()), SoftRef);
+			Settings->SaveConfig(CPF_Config, *Settings->GetDefaultConfigFilename());
+		}
+	}
+
+	AllTiles.Empty();
 }
 
 void AMapCaptureActor::OnConstruction(const FTransform& Transform)

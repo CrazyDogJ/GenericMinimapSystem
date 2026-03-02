@@ -91,7 +91,7 @@ UMinimapMapData* UMinimapSubsystem::GetCurrentMinimapMapData()
     return nullptr;
 }
 
-FHotPointInfo UMinimapSubsystem::GetHotPointInfoFromGuid(FGuid Guid)
+FHotPointInfo UMinimapSubsystem::GetHotPointInfoFromGuid(FGuid Guid, bool& bSuccess)
 {
     if (CurrentMinimapMapData && Guid.IsValid())
     {
@@ -102,10 +102,12 @@ FHotPointInfo UMinimapSubsystem::GetHotPointInfoFromGuid(FGuid Guid)
 
         if (Ptr)
         {
+            bSuccess = true;
             return *Ptr;
         }
     }
 
+    bSuccess = false;
     return FHotPointInfo();
 }
 

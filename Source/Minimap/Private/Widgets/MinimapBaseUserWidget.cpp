@@ -22,6 +22,19 @@ UMinimapBaseUserWidget::UMinimapBaseUserWidget(const FObjectInitializer& Initial
 
 void UMinimapBaseUserWidget::AddMapPin(FGuid Guid)
 {
+	// Need local component.
+	const auto LocalPlayerComp = GetLocalPlayerMinimapComponent();
+	if (!LocalPlayerComp)
+	{
+		return;
+	}
+
+	// Not add hot point if not found.
+	if (!LocalPlayerComp->HotPointCheck(Guid))
+	{
+		return;
+	}
+	
 	bool bConstructCalled = false;
 	const auto Function =
 		[this, Guid, &bConstructCalled](UUserWidget* WidgetObject, const TSharedRef<SWidget>& Content)

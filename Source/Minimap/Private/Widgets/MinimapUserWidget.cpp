@@ -13,6 +13,9 @@ void UMinimapUserWidget::NativeConstruct()
 	if (GetMinimapImageWidget() && GetCurrentMapData())
 	{
 		const auto DynMat = GetMinimapImageWidget()->GetDynamicMaterial();
+		const auto Texture = GetCurrentMapData()->MapTexture;
+		Texture->UpdateResource();
+		Texture->SetForceMipLevelsToBeResident(10.0f);
 		DynMat->SetTextureParameterValue("Map", GetCurrentMapData()->MapTexture);
 	}
 	

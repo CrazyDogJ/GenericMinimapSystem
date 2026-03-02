@@ -16,11 +16,8 @@ struct FHotPointSaveGame
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(BlueprintReadOnly, SaveGame)
-	FString LevelName;
-
 	UPROPERTY(SaveGame)
-	TMap<FGuid, bool> HotPointFoundMap;
+	TArray<FGuid> HotPointFoundMap;
 };
 
 USTRUCT(BlueprintType)
@@ -36,7 +33,7 @@ public:
 	FVector TempPinLocation = FVector::ZeroVector;
 
 	UPROPERTY(SaveGame, BlueprintReadOnly)
-	TArray<FHotPointSaveGame> HotPointSaveGames;
+	TMap<FString, FHotPointSaveGame> HotPointSaveGames;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FShownMapPinEvent, FGuid, Guid);
@@ -79,7 +76,7 @@ public:
 	APawn* OwnerPawn;
 
 	UPROPERTY(BlueprintReadOnly)
-	TArray<FHotPointSaveGame> HotPointSaveGames;
+	TMap<FString, FHotPointSaveGame> HotPointSaveGames;
 
 	UPROPERTY(BlueprintReadWrite, Replicated)
 	AMapPinActor* TempPin;
@@ -150,8 +147,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void LoadSaveData(FMinimapSaveData inData, UTexture2D* MapMaskData);
 
-	UFUNCTION(BlueprintCallable)
-	bool IsHotPointFound(FHotPointInfo HotPointInfo);
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool HotPointCheck(FGuid Guid) const;
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool IsHotPointFound(FGuid HotPointGuid) const;
 	
 	bool GetHitResultAtScreenPosition(const FVector2D ScreenPosition, const ECollisionChannel TraceChannel, const FCollisionQueryParams& CollisionQueryParams, FHitResult& HitResult) const;
 

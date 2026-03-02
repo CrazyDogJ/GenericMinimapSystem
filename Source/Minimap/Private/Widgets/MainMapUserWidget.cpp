@@ -61,6 +61,14 @@ void UMainMapUserWidget::OnCompUnreg(UMinimapComponent* Component)
 	}
 }
 
+void UMainMapUserWidget::OnHotPointFound(const FHotPointInfo& HotPointInfo)
+{
+	if (!Markers.Find(HotPointInfo.IdentifyGuid))
+	{
+		AddMapPin(HotPointInfo.IdentifyGuid);
+	}
+}
+
 void UMainMapUserWidget::UpdateText() const
 {
 	if (const auto TextBlock = GetScaleDisplayText())
@@ -258,6 +266,7 @@ void UMainMapUserWidget::ManageEvents(bool bManage)
 			Subsystem->OnStaticUnregistered.AddDynamic(this, &ThisClass::OnStaticUnreg);
 			Subsystem->OnComponentRegistered.AddDynamic(this, &ThisClass::OnCompReg);
 			Subsystem->OnComponentUnregistered.AddDynamic(this, &ThisClass::OnCompUnreg);
+			Subsystem->OnHotPointFoundEvent.AddDynamic(this, &ThisClass::OnHotPointFound);
 		}
 		else
 		{
@@ -265,6 +274,7 @@ void UMainMapUserWidget::ManageEvents(bool bManage)
 			Subsystem->OnStaticUnregistered.RemoveAll(this);
 			Subsystem->OnComponentRegistered.RemoveAll(this);
 			Subsystem->OnComponentUnregistered.RemoveAll(this);
+			Subsystem->OnHotPointFoundEvent.RemoveAll(this);
 		}
 	}
 }

@@ -109,9 +109,9 @@ struct FHotPointInfo : public FMapPinBase
 
 public:
 	
-	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	bool bIsTeleportPoint = false;
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, meta = (EditCondition = bIsTeleportPoint))
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (EditCondition = bIsTeleportPoint))
 	FTransform TeleportTransform;
 };

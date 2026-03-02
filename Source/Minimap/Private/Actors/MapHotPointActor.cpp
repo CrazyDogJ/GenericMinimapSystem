@@ -40,20 +40,22 @@ void AMapHotPointActor::FoundThisMapHotPoint(UMinimapComponent_Player* PlayerCom
 		return;
 	}
 
-	FHotPointSaveGame* FoundStruct = PlayerComp->HotPointSaveGames.FindByPredicate([&](const FHotPointSaveGame& Item)
+	const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>();
+	const auto LevelName = UGameplayStatics::GetCurrentLevelName(GetWorld());
+	if (FHotPointSaveGame* FoundStruct = PlayerComp->HotPointSaveGames.Find(LevelName))
 	{
-		return Item.LevelName == UGameplayStatics::GetCurrentLevelName(GetWorld());
-	});
-	
-	if (FoundStruct)
-	{
-		FoundStruct->HotPointFoundMap.Add(Info.IdentifyGuid, true);
+		if (FoundStruct->HotPointFoundMap.Find(Info.IdentifyGuid) < 0)
+		{
+			FoundStruct->HotPointFoundMap.Add(Info.IdentifyGuid);
+			Subsystem->OnHotPointFoundEvent.Broadcast(Info);
+		}
 	}
 	else
 	{
-		auto NewStruct = PlayerComp->HotPointSaveGames.Add(FHotPointSaveGame());
-		PlayerComp->HotPointSaveGames[NewStruct].LevelName = UGameplayStatics::GetCurrentLevelName(GetWorld());
-		PlayerComp->HotPointSaveGames[NewStruct].HotPointFoundMap.Add(Info.IdentifyGuid, true);
+		auto NewStruct = FHotPointSaveGame();
+		NewStruct.HotPointFoundMap.Add(Info.IdentifyGuid);
+		PlayerComp->HotPointSaveGames.Add(LevelName, NewStruct);
+		Subsystem->OnHotPointFoundEvent.Broadcast(Info);
 	}
 }
 
@@ -68,6 +70,7 @@ void AMapHotPointActor::OnConstruction(const FTransform& Transform)
 		if (const auto Tex = Cast<UTexture2D>(Info.MapPinBrush.GetResourceObject()))
 		{
 			BillboardComponent->SetSprite(Tex);
+			BillboardComponent->ScreenSize = Info.MapPinBrush.ImageSize.X;
 		}
 	}
 	else

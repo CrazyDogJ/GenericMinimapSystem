@@ -43,6 +43,13 @@ public:
 	UPROPERTY(EditAnywhere)
 	USceneCaptureComponent2D* Capture2D;
 
+	TArray<FTileCaptureResult> AllTiles;
+	int CurrentTileIndex = 0;
+	TMap<FIntPoint, FVector> TilePositions;
+	void StartCapture();
+	void CaptureNextTile();
+	void CaptureFinished();
+	
 	UPROPERTY(EditAnywhere)
 	int32 TilePower = 10;
 

@@ -26,7 +26,6 @@ public class Minimap : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
-				"Settings", 
 				"AIModule",
 				"GameplayTags",
 				"NavigationSystem"

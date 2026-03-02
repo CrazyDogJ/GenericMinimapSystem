@@ -17,8 +17,9 @@ public:
 
 	virtual void PreRegisterAllComponents() override;
 
+#if WITH_EDITOR
 	virtual void PreSave(FObjectPreSaveContext SaveContext) override;
-
+#endif
 	// Update collision avoid something world.
 	virtual void SetVisibility(bool bIsVisible) override;
 };

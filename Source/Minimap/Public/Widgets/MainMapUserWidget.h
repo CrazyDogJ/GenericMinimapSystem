@@ -35,6 +35,8 @@ protected:
 	void OnCompReg(UMinimapComponent* Component);
 	UFUNCTION()
 	void OnCompUnreg(UMinimapComponent* Component);
+	UFUNCTION()
+	void OnHotPointFound(const FHotPointInfo& HotPointInfo);
 
 	void UpdateText() const;
 	void UpdateDragging();

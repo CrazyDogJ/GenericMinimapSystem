@@ -19,6 +19,7 @@ struct FZoneGraphLanePath_BP
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapComponentEvent, UMinimapComponent*, Component);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStaticMapPinEvent, const FStaticMapPin&, StaticMapPin);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapUserSettingsChangedEvent, UMinimapUserSettings*, MinimapUserSettings);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHotPointFoundEvent, const FHotPointInfo&, HotPointInfo);
 
 /**
  * 
@@ -53,6 +54,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
 	FMinimapUserSettingsChangedEvent OnMinimapUserSettingsChangedEvent;
+
+	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
+	FHotPointFoundEvent OnHotPointFoundEvent;
 	
 #pragma endregion 
 	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem")
@@ -75,7 +79,7 @@ public:
 	UMinimapMapData* GetCurrentMinimapMapData();
 
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
-	FHotPointInfo GetHotPointInfoFromGuid(FGuid Guid);
+	FHotPointInfo GetHotPointInfoFromGuid(FGuid Guid, bool& bSuccess);
 
 	UFUNCTION(BlueprintPure)
 	FStaticMapPin GetShownMinimapPin(FGuid Guid, bool& Success) const;

@@ -508,19 +508,30 @@ void UMinimapComponent_Player::LoadSaveData(FMinimapSaveData inData, UTexture2D*
 	}
 }
 
-bool UMinimapComponent_Player::IsHotPointFound(FHotPointInfo HotPointInfo)
+bool UMinimapComponent_Player::HotPointCheck(FGuid Guid) const
 {
-	FHotPointSaveGame* FoundStruct = HotPointSaveGames.FindByPredicate([&](const FHotPointSaveGame& Item)
+	const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>();
+	bool bIsHotPoint;
+	Subsystem->GetHotPointInfoFromGuid(Guid, bIsHotPoint);
+	if (!bIsHotPoint)
 	{
-		return Item.LevelName == UGameplayStatics::GetCurrentLevelName(GetWorld());
-	});
+		return true;
+	}
+	
+	if (bIsHotPoint && !IsHotPointFound(Guid))
+	{
+		return false;
+	}
 
-	if (FoundStruct)
+	return true;
+}
+
+bool UMinimapComponent_Player::IsHotPointFound(FGuid HotPointGuid) const
+{
+	if (const auto FoundMapData = HotPointSaveGames.Find(UGameplayStatics::GetCurrentLevelName(GetWorld())))
 	{
-		if (const auto Ptr = FoundStruct->HotPointFoundMap.Find(HotPointInfo.IdentifyGuid))
-		{
-			return *Ptr;
-		}
+		const auto FoundHotPoint = FoundMapData->HotPointFoundMap.Find(HotPointGuid);
+		return FoundHotPoint != INDEX_NONE;
 	}
 	
 	return false;
@@ -607,7 +618,7 @@ void UMinimapComponent_Player::UpdateMinimapShownPins()
 
 void UMinimapComponent_Player::AddMinimapPin(FGuid Guid)
 {
-	if (ShownMapPinsGuids.Find(Guid) < 0)
+	if (ShownMapPinsGuids.Find(Guid) < 0 && HotPointCheck(Guid))
 	{
 		ShownMapPinsGuids.Add(Guid);
 		OnMapPinShowOnMinimap.Broadcast(Guid);

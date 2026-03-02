@@ -15,7 +15,7 @@ class MINIMAP_API AMapHotPointActor : public AActor
 public:
 	AMapHotPointActor();
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FHotPointInfo Info;
 
 	UFUNCTION(BlueprintCallable)

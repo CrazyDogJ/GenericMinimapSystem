@@ -27,6 +27,7 @@ public class MinimapEditor : ModuleRules
                 "UnrealEd",
                 "ComponentVisualizers",
                 "RenderCore",
+                "PropertyEditor"
             }
         );
     }
