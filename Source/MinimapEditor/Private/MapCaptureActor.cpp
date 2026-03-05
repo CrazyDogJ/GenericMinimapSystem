@@ -205,7 +205,6 @@ void AMapCaptureActor::CaptureFinished()
 	// }
 
 	FCreateTexture2DParameters CreateTexture2DParameters = FCreateTexture2DParameters();
-	CreateTexture2DParameters.bVirtualTexture = true;
 	
 	// Find or create package.
 	UPackage* MapTexturePackage = CreatePackage(*TotalFileName);
