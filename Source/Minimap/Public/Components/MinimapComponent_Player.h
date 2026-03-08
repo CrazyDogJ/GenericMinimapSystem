@@ -237,20 +237,20 @@ public:
 	/**
 	 * Get zone actor width by lane index
 	 */
-	float GetZoneWidthByLaneIndex(const FZoneGraphStorage& ZoneStorage, int32 LaneIndex) const;
+	static float GetZoneWidthByLaneIndex(const UObject* WorldContext, const FZoneGraphStorage& ZoneStorage, int32 LaneIndex);
 	
 	UFUNCTION(BlueprintCallable)
 	int GetPathLaneCount(const FZoneGraphLanePath_BP& Path);
 
-	UFUNCTION(BlueprintCallable)
-	bool GetZoneGraphPathBP(FVector StartPosition, FVector DestPosition, FVector SearchExtent, FZoneGraphLanePath_BP& Path);
+	UFUNCTION(BlueprintCallable, meta=(WorldContext = "WorldContext"))
+	static bool GetZoneGraphPathBP(const UObject* WorldContext, FVector StartPosition, FVector DestPosition, FVector SearchExtent, FZoneGraphLanePath_BP& Path);
 
-	UFUNCTION(BlueprintCallable)
-	bool GetPathPoints(const FZoneGraphLanePath_BP& Path, TArray<FVector>& PathPoints);
+	UFUNCTION(BlueprintCallable, meta=(WorldContext = "WorldContext"))
+	static bool GetPathPoints(const UObject* WorldContext, const FZoneGraphLanePath_BP& Path, TArray<FVector>& PathPoints);
 
-	TArray<FVector> ConvertPathToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLanePath& Path);
-	TArray<FVector> ConvertLaneToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLaneHandle& LaneHandle);
-	TArray<FVector> ConvertLaneToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLaneLocation& InStartLocation, const FZoneGraphLaneLocation& InEndLocation);
+	static TArray<FVector> ConvertPathToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLanePath& Path);
+	static TArray<FVector> ConvertLaneToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLaneHandle& LaneHandle);
+	static TArray<FVector> ConvertLaneToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLaneLocation& InStartLocation, const FZoneGraphLaneLocation& InEndLocation);
 	// Zone Graph helper functions -------------------------------------------------------------------------------------
 #pragma endregion Nav Query
 

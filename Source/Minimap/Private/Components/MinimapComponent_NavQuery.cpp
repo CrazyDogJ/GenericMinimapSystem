@@ -40,16 +40,19 @@ void UMinimapComponent_Player::UpdateNavPath(const float& DeltaTime)
 			UE::Tasks::Launch(UE_SOURCE_LOCATION, [this]()
 			{
 				FZoneGraphLanePath_BP OutPath;
-				bPathPointsValid = GetZoneGraphPathBP(NavQueryStartPosition, NavQueryEndPosition, NavQueryExtend, OutPath);
-				GetPathPoints(OutPath, NavQueryOutPathPoints);
+				bPathPointsValid = GetZoneGraphPathBP(this, NavQueryStartPosition, NavQueryEndPosition, NavQueryExtend, OutPath);
+				GetPathPoints(this, OutPath, NavQueryOutPathPoints);
 			});
 		}
 	}
 }
 
-float UMinimapComponent_Player::GetZoneWidthByLaneIndex(const FZoneGraphStorage& ZoneStorage, int32 LaneIndex) const
+float UMinimapComponent_Player::GetZoneWidthByLaneIndex(const UObject* WorldContext, const FZoneGraphStorage& ZoneStorage, int32 LaneIndex)
 {
-	const auto ZoneGraph = UWorld::GetSubsystem<UZoneGraphSubsystem>(GetWorld());
+	if (!WorldContext) return false;
+	const UWorld* World = WorldContext->GetWorld();
+	if (!World) return false;
+	const auto ZoneGraph = UWorld::GetSubsystem<UZoneGraphSubsystem>(World);
 	auto StartZoneData = ZoneStorage.GetZoneDataFromLaneIndex(LaneIndex);
 	
 	float ZoneWidth = 0.0f;
@@ -68,10 +71,13 @@ int UMinimapComponent_Player::GetPathLaneCount(const FZoneGraphLanePath_BP& Path
 	return Path.Path.Lanes.Num();
 }
 
-bool UMinimapComponent_Player::GetZoneGraphPathBP(FVector StartPosition, FVector DestPosition, FVector SearchExtent,
-	FZoneGraphLanePath_BP& Path)
+bool UMinimapComponent_Player::GetZoneGraphPathBP(const UObject* WorldContext, FVector StartPosition, FVector DestPosition,
+	FVector SearchExtent, FZoneGraphLanePath_BP& Path)
 {
-	const auto ZoneGraph = UWorld::GetSubsystem<UZoneGraphSubsystem>(GetWorld());
+	if (!WorldContext) return false;
+	const UWorld* World = WorldContext->GetWorld();
+	if (!World) return false;
+	const auto ZoneGraph = UWorld::GetSubsystem<UZoneGraphSubsystem>(World);
     
     FZoneGraphLaneLocation StartOutLaneLocation;
     float StartOutDistanceSqr;
@@ -92,28 +98,33 @@ bool UMinimapComponent_Player::GetZoneGraphPathBP(FVector StartPosition, FVector
     if (const AZoneGraphData* Data = ZoneGraph->GetZoneGraphData(StartOutLaneLocation.LaneHandle.DataHandle))
     {
         const FZoneGraphStorage& ZoneGraphStorage = Data->GetStorage();
-        FZoneGraphCustomAStarWrapper Graph(ZoneGraphStorage);
+    	FZoneGraphCustomAStarNode StartNode(FZoneGraphLaneNodeRef(StartNearestLaneLocation.LaneHandle.Index, StartNearestLaneLocation.DistanceAlongLane));
+    	FZoneGraphCustomAStarNode EndNode(FZoneGraphLaneNodeRef(EndNearestLaneLocation.LaneHandle.Index, EndNearestLaneLocation.DistanceAlongLane));
+    	FZoneGraphCustomPathFilter PathFilter(ZoneGraphStorage, StartNearestLaneLocation, EndNearestLaneLocation, FZoneGraphTagFilter());
+        FZoneGraphCustomAStarWrapper Graph(ZoneGraphStorage, StartNearestLaneLocation, EndNearestLaneLocation);
         FZoneGraphCustomAStar Pathfinder(Graph);
-        // @todo: pass FZoneGraphLaneLocation directly to the constructor
-        FZoneGraphCustomAStarNode StartNode(StartNearestLaneLocation.LaneHandle.Index, StartNearestLaneLocation.Position);
-        FZoneGraphCustomAStarNode EndNode(EndNearestLaneLocation.LaneHandle.Index, EndNearestLaneLocation.Position);
-        FZoneGraphCustomPathFilter PathFilter(ZoneGraphStorage, StartNearestLaneLocation, EndNearestLaneLocation, FZoneGraphTagFilter());
 				
         // @todo: see if we can return directly a path of lane handles
         TArray<FZoneGraphCustomAStarWrapper::FNodeRef> ResultPath;
 
         if (EGraphAStarResult Result = Pathfinder.FindPath(StartNode, EndNode, PathFilter, ResultPath); Result == SearchSuccess)
-    	{
-		    FZoneGraphLanePath LanePath;
-		    //Store the resulting lanes
-    		LanePath.Reset(ResultPath.Num());
+        {
+	        FZoneGraphLanePath LanePath;
+        	//Store the resulting lanes
+        	LanePath.Reset(ResultPath.Num());
 
-    		LanePath.StartLaneLocation = StartNearestLaneLocation;
-    		LanePath.EndLaneLocation = EndNearestLaneLocation;
-    		for (FZoneGraphCustomAStarWrapper::FNodeRef Node : ResultPath)
-    		{
-    			LanePath.Add(FZoneGraphLaneHandle(Node, StartNearestLaneLocation.LaneHandle.DataHandle));
-    		}
+        	LanePath.StartLaneLocation = StartNearestLaneLocation;
+        	LanePath.EndLaneLocation = EndNearestLaneLocation;
+        	for (FZoneGraphCustomAStarWrapper::FNodeRef Node : ResultPath)
+        	{
+        		LanePath.Lanes.AddUnique(FZoneGraphLaneHandle(Node.LaneIndex, ZoneGraphStorage.DataHandle));
+        	}
+
+        	//for (const auto Itr : LanePath.Lanes)
+        	//{
+        	//	FString Message = FString::Printf(TEXT("Lane Index : %i"), Itr.Index);
+        	//	GEngine->AddOnScreenDebugMessage(-1, 0.2f, FColor::Red, Message);
+        	//}
         	
         	Path.Path = LanePath;
         	return true;
@@ -123,7 +134,7 @@ bool UMinimapComponent_Player::GetZoneGraphPathBP(FVector StartPosition, FVector
 	return false;
 }
 
-bool UMinimapComponent_Player::GetPathPoints(const FZoneGraphLanePath_BP& Path, TArray<FVector>& PathPoints)
+bool UMinimapComponent_Player::GetPathPoints(const UObject* WorldContext, const FZoneGraphLanePath_BP& Path, TArray<FVector>& PathPoints)
 {
 	PathPoints.Empty();
 	
@@ -132,7 +143,10 @@ bool UMinimapComponent_Player::GetPathPoints(const FZoneGraphLanePath_BP& Path, 
 		return false;
 	}
 	
-	const auto ZoneGraph = UWorld::GetSubsystem<UZoneGraphSubsystem>(GetWorld());
+	if (!WorldContext) return false;
+	const UWorld* World = WorldContext->GetWorld();
+	if (!World) return false;
+	const auto ZoneGraph = UWorld::GetSubsystem<UZoneGraphSubsystem>(World);
 	const auto DataHandle = Path.Path.Lanes[0].DataHandle;
 	const FZoneGraphStorage& ZoneStorage = *ZoneGraph->GetZoneGraphStorage(DataHandle);
 	
@@ -153,7 +167,7 @@ bool UMinimapComponent_Player::GetPathPoints(const FZoneGraphLanePath_BP& Path, 
 			// 最近的逆向车道
 			auto StartZoneData = ZoneStorage.GetZoneDataFromLaneIndex(Path.Path.StartLaneLocation.LaneHandle.Index);
 			// 获取起点区域宽度（可以是函数）
-			float ZoneWidth = GetZoneWidthByLaneIndex(ZoneStorage, Path.Path.StartLaneLocation.LaneHandle.Index);
+			float ZoneWidth = GetZoneWidthByLaneIndex(WorldContext, ZoneStorage, Path.Path.StartLaneLocation.LaneHandle.Index);
 			// 遍历并判断是否为对向车道且距离最近
 			float BestDist = MAX_FLT;
 			FZoneGraphLaneLocation BestOppoLaneLocation = FZoneGraphLaneLocation();
@@ -320,7 +334,7 @@ bool UMinimapComponent_Player::GetPathPoints(const FZoneGraphLanePath_BP& Path, 
 				break;
 			}
 
-			float ZoneWidth = GetZoneWidthByLaneIndex(ZoneStorage, Location.LaneHandle.Index);
+			float ZoneWidth = GetZoneWidthByLaneIndex(WorldContext, ZoneStorage, Location.LaneHandle.Index);
 			FZoneGraphLaneLocation LastLocation;
 			float LastDistSqr;
 			ZoneGraph->FindNearestLocationOnLane(Location.LaneHandle, PathPoints.Last(), ZoneWidth, LastLocation, LastDistSqr);

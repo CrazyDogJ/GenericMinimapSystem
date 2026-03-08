@@ -1,152 +1,234 @@
 #include "ZoneGraphAStar_Custom.h"
+
+#include "MinimapSettings.h"
 #include "ZoneGraphTypes.h"
 #include "ZoneGraphQuery.h"
 
-int32 FZoneGraphCustomAStarWrapper::GetNeighbourCountV2(const FZoneGraphCustomAStarNode& Node) const
+float FZoneGraphCustomAStarWrapper::GetZoneWidth(const FZoneGraphStorage& ZoneGraph, int32 ZoneIndex)
 {
-	// @todo: Make a special case to allow picking side neighbours when starting in an intersection.
-	//  Use ZoneData.Tags to identify where this should apply and return the correct neighbour count here.
-
-	// Return max link count, we'll return invalid link for the ones that we do not want to traverse.
-	const FZoneLaneData& Lane = ZoneGraph.Lanes[Node.NodeRef];
-	return Lane.GetLinkCount();
-}
-
-FZoneGraphCustomAStarWrapper::FNodeRef FZoneGraphCustomAStarWrapper::GetNeighbour(const FZoneGraphCustomAStarNode& Node, const int32 NeighbourIndex) const
-{
-	// @todo: Make a special case to allow picking side neighbours when starting in an intersections (use ZoneData.Tags to identify where this should apply).
-
-	const FZoneLaneData& Lane = ZoneGraph.Lanes[Node.NodeRef];
-	check(NeighbourIndex < Lane.GetLinkCount());
-
-	const int32 LinkIndex = Lane.LinksBegin + NeighbourIndex;
-	const FZoneLaneLinkData& Link = ZoneGraph.LaneLinks[Lane.LinksBegin + NeighbourIndex];
-
-	// Allow to pick left/right adjacent flags at start/end.
-	if (Link.Type == EZoneLaneLinkType::Adjacent && Link.HasFlags(EZoneLaneLinkFlags::Left | EZoneLaneLinkFlags::Right))
+	if (ZoneIndex == INDEX_NONE)
 	{
-		return Link.DestLaneIndex;
+		return INDEX_NONE;
 	}
 	
-	// Normally allow only outgoing lanes
-	if (Link.Type == EZoneLaneLinkType::Outgoing)
+	const auto ZoneData = ZoneGraph.Zones[ZoneIndex];
+	const auto LaneCount = ZoneData.GetLaneCount();
+	float Result = 0.0f;
+	for (int i = 0; i < LaneCount; ++i)
 	{
-		return Link.DestLaneIndex;
+		float OutWidth;
+		UE::ZoneGraph::Query::GetLaneWidth(ZoneGraph, ZoneData.LanesBegin + i, OutWidth);
+		Result += OutWidth;
+	}
+
+	return Result;
+}
+
+int32 FZoneGraphCustomAStarWrapper::GetOutgoingLink(const FZoneGraphStorage& ZoneGraph, int32 LaneIndex)
+{
+	if (LaneIndex == INDEX_NONE)
+	{
+		return INDEX_NONE;
+	}
+	
+	const auto LaneData = ZoneGraph.Lanes[LaneIndex];
+	const auto LaneLinkCount = LaneData.GetLinkCount();
+	for (int i = 0; i < LaneLinkCount; ++i)
+	{
+		const auto ItrLinkIndex = LaneData.LinksBegin + i;
+		const auto LaneLink = ZoneGraph.LaneLinks[ItrLinkIndex];
+		if (LaneLink.Type == EZoneLaneLinkType::Outgoing)
+		{
+			return ItrLinkIndex;
+		}
 	}
 
 	return INDEX_NONE;
 }
 
-bool FZoneGraphCustomAStarNode::IsStartOrIsEnd() const
+int32 FZoneGraphCustomAStarWrapper::GetNeighbourCountV2(const FZoneGraphCustomAStarNode& Node) const
 {
-	return Position != FVector(TNumericLimits<FVector::FReal>::Max());
+	const FZoneLaneData& Lane = ZoneGraph.Lanes[Node.NodeRef.LaneIndex];
+	int32 Result = Lane.GetLinkCount();
+	const auto EndZoneIndex = ZoneGraph.Lanes[EndLocation.LaneHandle.Index].ZoneIndex;
+	const auto CurrentZoneIndex = ZoneGraph.Lanes[Node.NodeRef.LaneIndex].ZoneIndex;
+
+	// Special same zone
+	if (CurrentZoneIndex == EndZoneIndex)
+	{
+		// Special same lane
+		float EndLaneDistance;
+		if (Node.NodeRef.LaneIndex == EndLocation.LaneHandle.Index)
+		{
+			EndLaneDistance = EndLocation.DistanceAlongLane;
+		}
+		// Special other lane
+		else
+		{
+			const float ZoneWidth = GetZoneWidth(ZoneGraph, CurrentZoneIndex);
+			// Rare case, same zone, get nearest point on NeighbourNode 
+			const float SearchDistance = ZoneWidth; // Arbitrary search dist
+			FZoneGraphLaneLocation LocationOnCurrentLane;
+			float DistanceSqr = 0.f;
+			FBox Bounds(EndLocation.Position, EndLocation.Position);
+			Bounds = Bounds.ExpandBy(SearchDistance);
+			UE::ZoneGraph::Query::FindNearestLocationOnLane(
+				ZoneGraph,
+				FZoneGraphLaneHandle(Node.NodeRef.LaneIndex, ZoneGraph.DataHandle),
+				Bounds,
+				LocationOnCurrentLane,
+				DistanceSqr
+			);
+			
+			EndLaneDistance = LocationOnCurrentLane.DistanceAlongLane;
+			if (!EndLocationSpecial.IsValid())
+			{
+				EndLocationSpecial = FNodeRef(Node.NodeRef.LaneIndex, EndLaneDistance);
+			}
+		}
+		// Check should add one more neighbour count.
+		const auto CurrentLaneDistance = Node.NodeRef.LaneDistance;
+		if (EndLaneDistance > CurrentLaneDistance)
+		{
+			const auto OutgoingLinkIndex = GetOutgoingLink(ZoneGraph, Node.NodeRef.LaneIndex);
+			if (OutgoingLinkIndex == INDEX_NONE)
+			{
+				Result += 1;
+			}
+		}
+	}
+
+	return Result;
+}
+
+FZoneGraphCustomAStarWrapper::FNodeRef FZoneGraphCustomAStarWrapper::GetNeighbour(const FZoneGraphCustomAStarNode& Node, const int32 NeighbourIndex) const
+{
+	const FZoneLaneData& Lane = ZoneGraph.Lanes[Node.NodeRef.LaneIndex];
+	const int32 LinkIndex = Lane.LinksBegin + NeighbourIndex;
+	const FZoneLaneLinkData& Link = ZoneGraph.LaneLinks[LinkIndex];
+	
+	// Special(End node)
+	if (NeighbourIndex == Lane.GetLinkCount())
+	{
+		return FZoneGraphLaneNodeRef(Node.NodeRef.LaneIndex, EndLocation.DistanceAlongLane);
+	}
+	
+	// Allow to pick left/right adjacent flags at start/end.
+	if (Link.Type == EZoneLaneLinkType::Adjacent)
+	{
+		// End change lane.
+		if (Node.NodeRef == EndLocationSpecial)
+		{
+			return FZoneGraphLaneNodeRef(Link.DestLaneIndex, EndLocation.DistanceAlongLane);
+		}
+		
+		// Start change lane.
+		const float ZoneWidth = GetZoneWidth(ZoneGraph, Lane.ZoneIndex);
+		// Rare case, same zone, get nearest point on NeighbourNode 
+		const float SearchDistance = ZoneWidth; // Arbitrary search dist
+		FZoneGraphLaneLocation LocationOnCurrentLane;
+		float DistanceSqr = 0.f;
+		FBox Bounds(StartLocation.Position, StartLocation.Position);
+		Bounds = Bounds.ExpandBy(SearchDistance);
+		UE::ZoneGraph::Query::FindNearestLocationOnLane(
+			ZoneGraph,
+			FZoneGraphLaneHandle(Link.DestLaneIndex, ZoneGraph.DataHandle),
+			Bounds,
+			LocationOnCurrentLane,
+			DistanceSqr
+		);
+
+		return FZoneGraphLaneNodeRef(Link.DestLaneIndex, LocationOnCurrentLane.DistanceAlongLane);
+	}
+	
+	// Normally allow only outgoing lanes
+	if (Link.Type == EZoneLaneLinkType::Outgoing)
+	{
+		// Same lane end node.
+		if (Node.NodeRef.LaneIndex == EndLocation.LaneHandle.Index)
+		{
+			return FZoneGraphLaneNodeRef(EndLocation.LaneHandle.Index, EndLocation.DistanceAlongLane);
+		}
+
+		// Next zone shape node.
+		return FZoneGraphLaneNodeRef(Link.DestLaneIndex, 0.0f);
+	}
+
+	return FZoneGraphLaneNodeRef();
 }
 
 bool FZoneGraphCustomPathFilter::IsStart(const FZoneGraphCustomAStarNode& Node) const
 {
-	return Node.NodeRef == StartLocation.LaneHandle.Index;
+	return Node.NodeRef.LaneIndex == StartLocation.LaneHandle.Index;
 }
 
 bool FZoneGraphCustomPathFilter::IsEnd(const FZoneGraphCustomAStarNode& Node) const
 {
-	return Node.NodeRef == EndLocation.LaneHandle.Index;
+	return Node.NodeRef.LaneIndex == EndLocation.LaneHandle.Index;
 }
 
 FVector::FReal FZoneGraphCustomPathFilter::GetHeuristicScale() const
 {
-	return 1.;
+	return GetDefault<UMinimapSettings>()->HeuristicScale;
 }
 
 FVector::FReal FZoneGraphCustomPathFilter::GetHeuristicCost(const FZoneGraphCustomAStarNode& NeighbourNode,
 	const FZoneGraphCustomAStarNode& EndNode) const
 {
-	static const FVector InvalidPosition(TNumericLimits<FVector::FReal>::Max());
-		
-	// Except for start to end nodes, compute heurisitic from the last point of lanes
-	if (NeighbourNode.Position == InvalidPosition)
-	{
-		// Neighbor nodes dont have position
-		const uint32 LaneIndex = NeighbourNode.NodeRef;
-		const FZoneLaneData& LaneData = ZoneStorage.Lanes[LaneIndex];
-		const FVector LaneEndPoint = ZoneStorage.LanePoints[LaneData.PointsEnd - 1];
+	FZoneGraphLaneLocation NeighbourNodePosition;
+	UE::ZoneGraph::Query::CalculateLocationAlongLane(ZoneStorage, NeighbourNode.NodeRef.LaneIndex, NeighbourNode.NodeRef.LaneDistance, NeighbourNodePosition);
+	const FVector EndNodePosition = EndLocation.Position;
 
-		ensure(EndNode.Position != InvalidPosition);
-		return FVector::Distance(LaneEndPoint, EndNode.Position);
-	}
-	else
-	{
-		ensure(NeighbourNode.Position != InvalidPosition && EndNode.Position != InvalidPosition);
-		return FVector::Distance(NeighbourNode.Position, EndNode.Position);
-	}
+	// Traversal cost is important to get shortest path.
+	return FVector::Distance(NeighbourNodePosition.Position, EndNodePosition);
 }
 
 FVector::FReal FZoneGraphCustomPathFilter::GetTraversalCost(const FZoneGraphCustomAStarNode& CurNode,
 	const FZoneGraphCustomAStarNode& NeighbourNode) const
 {
-	const FZoneLaneData& CurLane = ZoneStorage.Lanes[CurNode.NodeRef];
-	const FZoneLaneData& NeighbourLane = ZoneStorage.Lanes[NeighbourNode.NodeRef];
+	const FZoneLaneData& CurLane = ZoneStorage.Lanes[CurNode.NodeRef.LaneIndex];
+	const FZoneLaneData& NeighbourLane = ZoneStorage.Lanes[NeighbourNode.NodeRef.LaneIndex];
 	const bool bDifferentZones = (CurLane.ZoneIndex != NeighbourLane.ZoneIndex);
-
+	
 	if (bDifferentZones)
 	{
-		// Nodes are in different zones
-
-		float TravelLength = 0.f;
+		// In different zones, we use neighbour start point as out distance end point.
+		
+		float CurLaneLength = -1.f;
+		UE::ZoneGraph::Query::GetLaneLength(ZoneStorage, StartLocation.LaneHandle.Index, CurLaneLength);
+		
 		if (IsStart(CurNode))
 		{
-			float CurLaneLength = -1.f;
-			UE::ZoneGraph::Query::GetLaneLength(ZoneStorage, StartLocation.LaneHandle.Index, CurLaneLength);
-			TravelLength += (CurLaneLength - StartLocation.DistanceAlongLane);
+			return CurLaneLength - StartLocation.DistanceAlongLane;
 		}
 
-		if (IsEnd(NeighbourNode))
+		// Same zone as start node.
+		if (CurLane.ZoneIndex == ZoneStorage.Lanes[StartLocation.LaneHandle.Index].ZoneIndex)
 		{
-			TravelLength += EndLocation.DistanceAlongLane;
+			return CurLaneLength - CurNode.NodeRef.LaneDistance;
 		}
-		else
-		{
-			// Most common case, take the lane length of NeighbourNode.
-			// The traversal cost is the cost of reaching the end of the neighbour node.
-			float LaneLength = -1.f;
-			UE::ZoneGraph::Query::GetLaneLength(ZoneStorage, NeighbourNode.NodeRef, LaneLength);
-			TravelLength += LaneLength;
-		}
-		return TravelLength;
+		
+		return CurLaneLength;
 	}
 	else
 	{
-		// Special case, nodes are in the same zone
-		// Rare case, same zone, get nearest point on NeighbourNode 
-		const float SearchDistance = 5.f * CurLane.Width; // Arbitrary search dist
-		FZoneGraphLaneLocation LocationOnNeighbourNode;
-		float DistanceSqr = 0.f;
-		FBox Bounds(CurNode.Position, CurNode.Position);
-		Bounds = Bounds.ExpandBy(SearchDistance);
-		UE::ZoneGraph::Query::FindNearestLocationOnLane(
-			ZoneStorage,
-			FZoneGraphLaneHandle(NeighbourNode.NodeRef, ZoneStorage.DataHandle),
-			Bounds,
-			LocationOnNeighbourNode,
-			DistanceSqr
-		);
-
-		if (IsEnd(NeighbourNode))
+		// In same zones
+		
+		if (CurNode.NodeRef.LaneIndex == NeighbourNode.NodeRef.LaneIndex)
 		{
-			return FMath::Abs(EndLocation.DistanceAlongLane - LocationOnNeighbourNode.DistanceAlongLane);
+			return FMath::Abs(NeighbourNode.NodeRef.LaneDistance - CurNode.NodeRef.LaneDistance);
 		}
 		else
 		{
-			// Get distance from closest point on NeighbourNode to the end
-			float Length = -1.f;
-			UE::ZoneGraph::Query::GetLaneLength(ZoneStorage, NeighbourNode.NodeRef, Length);
-			return Length - LocationOnNeighbourNode.DistanceAlongLane;
+			// Cross lane.
+			return CurLane.Width/2 + NeighbourLane.Width/2;
 		}
 	}
 }
 
 bool FZoneGraphCustomPathFilter::IsTraversalAllowed(const FNodeRef StartNodeRef, const FNodeRef& Neighbour) const
 {
-	const FZoneGraphTagMask& LaneTagMask = ZoneStorage.Lanes[Neighbour].Tags;
+	const FZoneGraphTagMask& LaneTagMask = ZoneStorage.Lanes[Neighbour.LaneIndex].Tags;
 	return ZoneTagFilter.Pass(LaneTagMask);
 }
 

@@ -54,6 +54,9 @@ public:
 
 	UPROPERTY(EditAnywhere, Config, Category = "Minimap Settings")
 	float NavQueryPeriod = 0.2f;
+
+	UPROPERTY(EditAnywhere, Config, Category = "Minimap Settings")
+	float HeuristicScale = 1.f;
 	
 	/** Get mini map widget class */
 	TSubclassOf<UMinimapUserWidget> GetMinimapWidgetClass() const;

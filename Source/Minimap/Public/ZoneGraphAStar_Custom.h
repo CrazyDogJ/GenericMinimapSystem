@@ -4,49 +4,83 @@
 #include "GraphAStar.h"
 #include "ZoneGraphTypes.h"
 
+struct FZoneGraphLaneNodeRef
+{
+	int32 LaneIndex = INDEX_NONE;
+	float LaneDistance = -1;
+
+	FZoneGraphLaneNodeRef() {}
+	
+	explicit FZoneGraphLaneNodeRef(int32 InInt) {}
+
+	FZoneGraphLaneNodeRef(const int32& InLaneIndex, const float& InLaneDistance)
+		: LaneIndex(InLaneIndex), LaneDistance(InLaneDistance)
+	{}
+	
+	bool operator==(const FZoneGraphLaneNodeRef& Other) const
+	{
+		return Other.LaneIndex == LaneIndex && Other.LaneDistance == LaneDistance;
+	}
+
+	bool IsValid() const
+	{
+		return LaneIndex != INDEX_NONE && LaneDistance >= 0.0f;
+	}
+};
+
+FORCEINLINE uint32 GetTypeHash(const FZoneGraphLaneNodeRef& NodeRef)
+{
+	uint32 Hash = GetTypeHash(NodeRef.LaneIndex);
+	Hash = HashCombine(Hash, GetTypeHash(NodeRef.LaneDistance));
+	return Hash;
+}
+
 struct FZoneGraphCustomAStarNode;
 
 /** Warpper around zone graph to be used by FGraphAStar */
 struct FZoneGraphCustomAStarWrapper
 {
-	FZoneGraphCustomAStarWrapper(const FZoneGraphStorage& InZoneGraph) 
-		: ZoneGraph(InZoneGraph) 
-	{}
+	FZoneGraphCustomAStarWrapper(const FZoneGraphStorage& InZoneGraph, const FZoneGraphLaneLocation& InStartLocation, const FZoneGraphLaneLocation& InEndLocation)
+		: ZoneGraph(InZoneGraph), StartLocation(InStartLocation), EndLocation(InEndLocation)
+	{
+	}
 
 	//////////////////////////////////////////////////////////////////////////
 	// FGraphAStar: TGraph
-	typedef int32/*lane index type*/ FNodeRef;
+	typedef FZoneGraphLaneNodeRef FNodeRef;
 
 	FORCEINLINE bool IsValidRef(const FNodeRef NodeRef) const
 	{
-		return NodeRef != INDEX_NONE;
+		return NodeRef.IsValid();
 	}
 
+	static float GetZoneWidth(const FZoneGraphStorage& ZoneGraph, int32 ZoneIndex);
+	static int32 GetOutgoingLink(const FZoneGraphStorage& ZoneGraph, int32 LaneIndex);
+	
 	int32 GetNeighbourCountV2(const FZoneGraphCustomAStarNode& Node) const;
 	FNodeRef GetNeighbour(const FZoneGraphCustomAStarNode& Node, const int32 NeighbourIndex) const;
 	//////////////////////////////////////////////////////////////////////////
 
 protected:
 	const FZoneGraphStorage& ZoneGraph;
+	const FZoneGraphLaneLocation StartLocation;
+	const FZoneGraphLaneLocation EndLocation;
+
+	mutable FNodeRef EndLocationSpecial = FNodeRef(INDEX_NONE);
 };
 
 /** Node representation for FZoneGraphCustomAStar */
 struct FZoneGraphCustomAStarNode : public FGraphAStarDefaultNode<FZoneGraphCustomAStarWrapper>
 {
 	typedef FGraphAStarDefaultNode<FZoneGraphCustomAStarWrapper> Super;
-	typedef int32/*lane index type*/ FNodeRef;
+	typedef FZoneGraphLaneNodeRef FNodeRef;
 
-	FORCEINLINE FZoneGraphCustomAStarNode(const FNodeRef InNodeRef = INDEX_NONE, const FVector InPosition = FVector(TNumericLimits<FVector::FReal>::Max()))
+	FORCEINLINE FZoneGraphCustomAStarNode(const FNodeRef InNodeRef = FZoneGraphLaneNodeRef())
 		: Super(InNodeRef)
-		, Position(InPosition)
 	{}
 
 	FZoneGraphCustomAStarNode(const FZoneGraphCustomAStarNode& Other) = default;
 	FGraphAStarDefaultNode& operator=(const FGraphAStarDefaultNode& Other) = delete;
-
-	bool IsStartOrIsEnd() const;
-
-	FVector Position; //@todo: this will likely change to be a position along the lane
 };
 
 /** Context for FGraphAStar::FindPath() */
@@ -54,7 +88,7 @@ struct FZoneGraphCustomPathFilter
 {
 	// @todo: rename FZoneGraphPathfindContext?
 
-	typedef int32/*lane index type*/ FNodeRef;
+	typedef FZoneGraphLaneNodeRef FNodeRef;
 
 	FZoneGraphCustomPathFilter(const FZoneGraphStorage& InGraph, const FZoneGraphLaneLocation& InStartLocation, const FZoneGraphLaneLocation& InEndLocation, const FZoneGraphTagFilter InZoneTagFilter = FZoneGraphTagFilter())
 		: ZoneStorage(InGraph) 
