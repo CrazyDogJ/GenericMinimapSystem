@@ -68,6 +68,10 @@ UMinimapMapData* UMinimapSubsystem::GetCurrentMinimapMapData()
     if (auto Value = Settings->MapsInfos.Find(UGameplayStatics::GetCurrentLevelName(GetWorld())))
     {
         CurrentMinimapMapData = Value->LoadSynchronous();
+        if (!CurrentMinimapMapData)
+        {
+            return nullptr;
+        }
     	// Update virtual texture.
     	CurrentMinimapMapData->MapTexture->UpdateResource();
         for (auto HotPoint : CurrentMinimapMapData->HotPointInfos)
