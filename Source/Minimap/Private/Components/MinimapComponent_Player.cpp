@@ -537,6 +537,27 @@ bool UMinimapComponent_Player::IsHotPointFound(FGuid HotPointGuid) const
 	return false;
 }
 
+void UMinimapComponent_Player::FindHotPoint(FHotPointInfo HotPoint)
+{
+	const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>();
+	const auto LevelName = UGameplayStatics::GetCurrentLevelName(GetWorld());
+	if (FHotPointSaveGame* FoundStruct = HotPointSaveGames.Find(LevelName))
+	{
+		if (FoundStruct->HotPointFoundMap.Find(HotPoint.IdentifyGuid) < 0)
+		{
+			FoundStruct->HotPointFoundMap.Add(HotPoint.IdentifyGuid);
+			Subsystem->OnHotPointFoundEvent.Broadcast(HotPoint);
+		}
+	}
+	else
+	{
+		auto NewStruct = FHotPointSaveGame();
+		NewStruct.HotPointFoundMap.Add(HotPoint.IdentifyGuid);
+		HotPointSaveGames.Add(LevelName, NewStruct);
+		Subsystem->OnHotPointFoundEvent.Broadcast(HotPoint);
+	}
+}
+
 void UMinimapComponent_Player::SetMinimapRadius(const float Radius)
 {
 	MinimapRadius = Radius;

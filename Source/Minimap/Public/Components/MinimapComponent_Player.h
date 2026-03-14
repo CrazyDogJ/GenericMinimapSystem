@@ -152,6 +152,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool IsHotPointFound(FGuid HotPointGuid) const;
+
+	UFUNCTION(BlueprintCallable)
+	void FindHotPoint(FHotPointInfo HotPointGuid);
 	
 	bool GetHitResultAtScreenPosition(const FVector2D ScreenPosition, const ECollisionChannel TraceChannel, const FCollisionQueryParams& CollisionQueryParams, FHitResult& HitResult) const;
 
