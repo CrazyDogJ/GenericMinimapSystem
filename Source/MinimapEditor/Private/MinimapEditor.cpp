@@ -1,7 +1,7 @@
 ﻿#include "MinimapEditor.h"
 
-#include "SplineWidgetDetailsCustomization.h"
-#include "Widgets/SplineWidget.h"
+//#include "SplineWidgetDetailsCustomization.h"
+//#include "Widgets/SplineWidget.h"
 #include "ISettingsModule.h"
 #include "MinimapSettings.h"
 
@@ -9,8 +9,9 @@
 
 void FMinimapEditorModule::StartupModule()
 {
-	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	PropertyModule.RegisterCustomClassLayout(USplineWidget::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FSplineWidgetDetailCustomization::MakeInstance));
+	// Settings register
+	//FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+	//PropertyModule.RegisterCustomClassLayout(USplineWidget::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FSplineWidgetDetailCustomization::MakeInstance));
 
 	if (ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings"))
 	{
@@ -25,8 +26,9 @@ void FMinimapEditorModule::ShutdownModule()
 		return;
 	}
 
-	FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	PropertyModule.UnregisterCustomClassLayout(USplineWidget::StaticClass()->GetFName());
+	// Settings unregister
+	//FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+	//PropertyModule.UnregisterCustomClassLayout(USplineWidget::StaticClass()->GetFName());
 
 	if (ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings"))
 	{

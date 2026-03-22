@@ -2,17 +2,7 @@
 
 
 #include "Actors/MinimapWPHLOD.h"
-
 #include "PhysicsEngine/BodySetup.h"
-#include "WorldPartition/WorldPartition.h"
-#include "WorldPartition/WorldPartitionHelpers.h"
-
-static int32 GWorldPartitionHLODForceDisableShadows = 0;
-static FAutoConsoleVariableRef CVarWorldPartitionHLODForceDisableShadows(
-	TEXT("wp.Runtime.HLOD.ForceDisableShadows"),
-	GWorldPartitionHLODForceDisableShadows,
-	TEXT("Force disable CastShadow flag on World Partition HLOD actors"),
-	ECVF_Scalability);
 
 AMinimapWPHLOD::AMinimapWPHLOD()
 {
@@ -20,15 +10,7 @@ AMinimapWPHLOD::AMinimapWPHLOD()
 
 void AMinimapWPHLOD::PreRegisterAllComponents()
 {
-	AActor::PreRegisterAllComponents();
-	
-	if (GWorldPartitionHLODForceDisableShadows && GetWorld() && GetWorld()->IsGameWorld())
-	{
-		ForEachComponent<UPrimitiveComponent>(false, [](UPrimitiveComponent* PrimitiveComponent)
-		{
-			PrimitiveComponent->SetCastShadow(false);
-		});
-	}
+	Super::PreRegisterAllComponents();
 
 #if WITH_EDITOR
 	if (GetWorld() && !IsRunningCommandlet() && !FApp::IsUnattended())
@@ -44,20 +26,6 @@ void AMinimapWPHLOD::PreRegisterAllComponents()
 		});
 	}	
 #endif
-
-	// If world is instanced, we need to recompute our bounds since they are in the instanced-world space
-	if (UWorldPartition* WorldPartition = FWorldPartitionHelpers::GetWorldPartition(this))
-	{
-		const bool bIsInstancedLevel = WorldPartition->GetTypedOuter<ULevel>()->IsInstancedLevel();
-		if (bIsInstancedLevel)
-		{
-			ForEachComponent<USceneComponent>(false, [](USceneComponent* SceneComponent)
-			{
-				// Clear bComputedBoundsOnceForGame so that the bounds are recomputed once
-				SceneComponent->bComputedBoundsOnceForGame = false;
-			});
-		}
-	}
 }
 
 #if WITH_EDITOR
@@ -89,9 +57,8 @@ void AMinimapWPHLOD::PreSave(FObjectPreSaveContext SaveContext)
 							FGuid PreviousBodySetupGuid = BodySetup->BodySetupGuid;
 							BodySetup->DefaultInstance.SetCollisionProfileName(UCollisionProfile::NoCollision_ProfileName);
 							BodySetup->DefaultInstance.SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-							BodySetup->bNeverNeedsCookedCollisionData = true;
-							BodySetup->bHasCookedCollisionData = false;
-							BodySetup->InvalidatePhysicsData();
+							BodySetup->bNeverNeedsCookedCollisionData = false;
+							BodySetup->bHasCookedCollisionData = true;
 							BodySetup->BodySetupGuid = PreviousBodySetupGuid;
 						}
 					}
@@ -106,8 +73,19 @@ void AMinimapWPHLOD::SetVisibility(bool bIsVisible)
 {
 	Super::SetVisibility(bIsVisible);
 
+	SetActorEnableCollision(bIsVisible);
 	ForEachComponent<UPrimitiveComponent>(false, [this, bIsVisible](UPrimitiveComponent* PrimitiveComponent)
 	{
-		PrimitiveComponent->SetCollisionEnabled(bIsVisible ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
+		if (bIsVisible)
+		{
+			PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			PrimitiveComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+			PrimitiveComponent->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+			PrimitiveComponent->SetCollisionResponseToChannel(ECC_Camera, ECR_Block);
+		}
+		else
+		{
+			PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
 	});
 }

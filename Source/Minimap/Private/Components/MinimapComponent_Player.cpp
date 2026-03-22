@@ -389,7 +389,7 @@ void UMinimapComponent_Player::TickComponent(float DeltaTime, enum ELevelTick Ti
 	{
 		if (const auto Controller = OwnerPawn->GetController())
 		{
-			if (Controller->IsLocalController())
+			if (Controller->IsLocalPlayerController())
 			{
 				UpdateNavPath(DeltaTime);
 				UpdateMinimapShownPins();

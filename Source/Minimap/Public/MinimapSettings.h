@@ -52,10 +52,10 @@ public:
 	UPROPERTY(EditAnywhere, Config, AdvancedDisplay, Category = "Minimap Settings")
 	TSoftClassPtr<UMinimapUserSettings> MinimapUserSettingsClass;
 
-	UPROPERTY(EditAnywhere, Config, Category = "Minimap Settings")
+	UPROPERTY(EditAnywhere, Config, Category = "Navigation")
 	float NavQueryPeriod = 0.2f;
 
-	UPROPERTY(EditAnywhere, Config, Category = "Minimap Settings")
+	UPROPERTY(EditAnywhere, Config, Category = "Navigation")
 	float HeuristicScale = 1.f;
 	
 	/** Get mini map widget class */

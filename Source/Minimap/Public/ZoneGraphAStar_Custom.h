@@ -43,6 +43,9 @@ struct FZoneGraphCustomAStarWrapper
 	FZoneGraphCustomAStarWrapper(const FZoneGraphStorage& InZoneGraph, const FZoneGraphLaneLocation& InStartLocation, const FZoneGraphLaneLocation& InEndLocation)
 		: ZoneGraph(InZoneGraph), StartLocation(InStartLocation), EndLocation(InEndLocation)
 	{
+		CachedZoneWidth = GetZoneWidth(ZoneGraph, StartLocation.LaneHandle.Index);
+		SetStartSpecial();
+		SetEndSpecial();
 	}
 
 	//////////////////////////////////////////////////////////////////////////
@@ -54,8 +57,12 @@ struct FZoneGraphCustomAStarWrapper
 		return NodeRef.IsValid();
 	}
 
-	static float GetZoneWidth(const FZoneGraphStorage& ZoneGraph, int32 ZoneIndex);
-	static int32 GetOutgoingLink(const FZoneGraphStorage& ZoneGraph, int32 LaneIndex);
+	static float GetZoneWidth(const FZoneGraphStorage& ZoneGraph, int32 LaneIndex);
+	static int32 GetLinkByType(const FZoneGraphStorage& ZoneGraph, EZoneLaneLinkType LinkType, int32 LaneIndex);
+	FZoneGraphLaneLocation QueryLaneLocationByLocation(const FVector& CheckLocation, int32 TargetLaneIndex) const;
+
+	void SetEndSpecial();
+	void SetStartSpecial();
 	
 	int32 GetNeighbourCountV2(const FZoneGraphCustomAStarNode& Node) const;
 	FNodeRef GetNeighbour(const FZoneGraphCustomAStarNode& Node, const int32 NeighbourIndex) const;
@@ -66,7 +73,9 @@ protected:
 	const FZoneGraphLaneLocation StartLocation;
 	const FZoneGraphLaneLocation EndLocation;
 
-	mutable FNodeRef EndLocationSpecial = FNodeRef(INDEX_NONE);
+	float CachedZoneWidth = 0.0f;
+	FNodeRef StartLocationSpecial = FNodeRef(INDEX_NONE);
+	FNodeRef EndLocationSpecial = FNodeRef(INDEX_NONE);
 };
 
 /** Node representation for FZoneGraphCustomAStar */

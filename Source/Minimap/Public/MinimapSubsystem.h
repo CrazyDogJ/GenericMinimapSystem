@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "MinimapMapData.h"
 #include "MinimapStructs.h"
+#include "ZoneGraphAStar_Custom.h"
 #include "ZoneGraphTypes.h"
 #include "MinimapSubsystem.generated.h"
 
@@ -14,6 +15,7 @@ struct FZoneGraphLanePath_BP
 	GENERATED_BODY()
 	
 	FZoneGraphLanePath Path;
+	TArray<float> Distances;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapComponentEvent, UMinimapComponent*, Component);
