@@ -3,25 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MinimapMapData.h"
 #include "MinimapStructs.h"
-#include "ZoneGraphAStar_Custom.h"
-#include "ZoneGraphTypes.h"
 #include "MinimapSubsystem.generated.h"
-
-USTRUCT(BlueprintType)
-struct FZoneGraphLanePath_BP
-{
-	GENERATED_BODY()
-	
-	FZoneGraphLanePath Path;
-	TArray<float> Distances;
-};
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapComponentEvent, UMinimapComponent*, Component);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStaticMapPinEvent, const FStaticMapPin&, StaticMapPin);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapUserSettingsChangedEvent, UMinimapUserSettings*, MinimapUserSettings);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FHotPointFoundEvent, const FHotPointInfo&, HotPointInfo);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHotPointFoundEvent, const FString&, LevelName, const FGuid&, Guid);
 
 /**
  * 
@@ -82,9 +70,6 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
 	FHotPointInfo GetHotPointInfoFromGuid(FGuid Guid, bool& bSuccess);
-
-	UFUNCTION(BlueprintPure)
-	FStaticMapPin GetShownMinimapPin(FGuid Guid, bool& Success) const;
 	
 	virtual void RegisterComponent(UMinimapComponent* Component);
 	virtual void UnregisterComponent(UMinimapComponent* Component);

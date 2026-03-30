@@ -4,7 +4,6 @@
 #include "Actors/MapHotPointActor.h"
 
 #include "Components/BillboardComponent.h"
-#include "Kismet/GameplayStatics.h"
 
 AMapHotPointActor::AMapHotPointActor()
 {
@@ -33,30 +32,14 @@ AMapHotPointActor::AMapHotPointActor()
 	}
 }
 
-void AMapHotPointActor::FoundThisMapHotPoint(UMinimapComponent_Player* PlayerComp)
+void AMapHotPointActor::FoundThisMapHotPoint(UMinimapComponent_Player* PlayerComp, bool Global)
 {
 	if (!PlayerComp)
 	{
 		return;
 	}
 
-	const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>();
-	const auto LevelName = UGameplayStatics::GetCurrentLevelName(GetWorld());
-	if (FHotPointSaveGame* FoundStruct = PlayerComp->HotPointSaveGames.Find(LevelName))
-	{
-		if (FoundStruct->HotPointFoundMap.Find(Info.IdentifyGuid) < 0)
-		{
-			FoundStruct->HotPointFoundMap.Add(Info.IdentifyGuid);
-			Subsystem->OnHotPointFoundEvent.Broadcast(Info);
-		}
-	}
-	else
-	{
-		auto NewStruct = FHotPointSaveGame();
-		NewStruct.HotPointFoundMap.Add(Info.IdentifyGuid);
-		PlayerComp->HotPointSaveGames.Add(LevelName, NewStruct);
-		Subsystem->OnHotPointFoundEvent.Broadcast(Info);
-	}
+	PlayerComp->FindHotPoint(HotPointLevelName, Info.IdentifyGuid, Global);
 }
 
 void AMapHotPointActor::OnConstruction(const FTransform& Transform)

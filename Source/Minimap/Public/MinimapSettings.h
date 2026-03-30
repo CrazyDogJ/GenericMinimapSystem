@@ -37,7 +37,7 @@ public:
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Minimap Settings")
 	TArray<FLinearColor> UniqueColors;
 
-	/** Add temp pin farthest line trace distance, also used in main map. */
+	/** Add temp pin the farthest line trace distance, also used in main map. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Minimap Settings")
 	float ControllerHitResultDistance;
 
@@ -57,6 +57,14 @@ public:
 
 	UPROPERTY(EditAnywhere, Config, Category = "Navigation")
 	float HeuristicScale = 1.f;
+
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(EditAnywhere, Config, Category = "Quad Tree")
+	int32 MaxPOIPerNode = 10;
+
+	UPROPERTY(EditAnywhere, Config, Category = "Quad Tree")
+	int32 MaxDepth = 6;
+#endif
 	
 	/** Get mini map widget class */
 	TSubclassOf<UMinimapUserWidget> GetMinimapWidgetClass() const;

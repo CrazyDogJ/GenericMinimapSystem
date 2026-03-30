@@ -6,9 +6,12 @@
 #include "EnhancedInputSubsystems.h"
 #include "Actors/MapPinActor.h"
 #include "MinimapSettings.h"
+#include "MinimapZoneGraphAStar.h"
 #include "Net/UnrealNetwork.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
+#include "Components/MinimapGlobal.h"
 #include "Engine/Canvas.h"
+#include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMaterialLibrary.h"
@@ -24,6 +27,7 @@ void UMinimapComponent_Player::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 
 	DOREPLIFETIME(UMinimapComponent_Player, TempPinBrush);
 	DOREPLIFETIME(UMinimapComponent_Player, TempPin);
+	DOREPLIFETIME_CONDITION(UMinimapComponent_Player, PoiStateList, COND_OwnerOnly);
 }
 
 void UMinimapComponent_Player::ReceiveControllerChangedDelegate_Implementation(APawn* Pawn, AController* OldController,
@@ -342,6 +346,8 @@ void UMinimapComponent_Player::SendRenderTargetToClients_Implementation(const in
 
 void UMinimapComponent_Player::BeginPlay()
 {
+	PoiStateList.WorldContextObject = this;
+	
 	Super::BeginPlay();
 	
 	NavQueryPeriod = GetDefault<UMinimapSettings>()->NavQueryPeriod;
@@ -474,7 +480,7 @@ void UMinimapComponent_Player::RemoveTempPinExec_Implementation()
 	}
 }
 
-FMinimapSaveData UMinimapComponent_Player::GetSaveData()
+FMinimapSaveData UMinimapComponent_Player::GetSaveData() const
 {
 	FMinimapSaveData OutData;
 	OutData.bHasTempPin = (TempPin != nullptr);
@@ -482,7 +488,7 @@ FMinimapSaveData UMinimapComponent_Player::GetSaveData()
 	{
 		OutData.TempPinLocation = TempPin->GetActorLocation();
 	}
-	OutData.HotPointSaveGames = HotPointSaveGames;
+	OutData.HotPointSaveGames = UMinimapFastArrayLibrary::GetPoiMapping(PoiStateList);
 	return OutData;
 }
 
@@ -493,7 +499,7 @@ void UMinimapComponent_Player::LoadSaveData(FMinimapSaveData inData, UTexture2D*
 	{
 		AddTempPinExec(inData.TempPinLocation);
 	}
-	HotPointSaveGames = inData.HotPointSaveGames;
+	UMinimapFastArrayLibrary::LoadPoi(PoiStateList, inData.HotPointSaveGames);
 	if (RT)
 	{
 		UKismetRenderingLibrary::ClearRenderTarget2D(GetWorld(), RT, FLinearColor::Black);
@@ -517,8 +523,10 @@ bool UMinimapComponent_Player::HotPointCheck(FGuid Guid) const
 	{
 		return true;
 	}
-	
-	if (bIsHotPoint && !IsHotPointFound(Guid))
+
+	// TODO : Local minimap dont implement now.
+	const auto bIsHotPointFound = IsHotPointFound(UGameplayStatics::GetCurrentLevelName(this), Guid);
+	if (bIsHotPoint && !bIsHotPointFound)
 	{
 		return false;
 	}
@@ -526,41 +534,113 @@ bool UMinimapComponent_Player::HotPointCheck(FGuid Guid) const
 	return true;
 }
 
-bool UMinimapComponent_Player::IsHotPointFound(FGuid HotPointGuid) const
+TMap<FString, FMinimapIndices> UMinimapComponent_Player::GetFoundHotPoints() const
 {
-	if (const auto FoundMapData = HotPointSaveGames.Find(UGameplayStatics::GetCurrentLevelName(GetWorld())))
+	if (const auto MinimapGlobal = GetWorld()->GetGameState()->GetComponentByClass<UMinimapGlobal>())
 	{
-		const auto FoundHotPoint = FoundMapData->HotPointFoundMap.Find(HotPointGuid);
-		return FoundHotPoint != INDEX_NONE;
+		return PoiStateList.AppendOther(MinimapGlobal->PoiStateList);
 	}
 	
-	return false;
+	return PoiStateList.PoiStateMap;
 }
 
-void UMinimapComponent_Player::FindHotPoint(FHotPointInfo HotPoint)
+bool UMinimapComponent_Player::IsHotPointFound(const FString& LevelName, const FGuid& PoiIndex) const
 {
-	const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>();
-	const auto LevelName = UGameplayStatics::GetCurrentLevelName(GetWorld());
-	if (FHotPointSaveGame* FoundStruct = HotPointSaveGames.Find(LevelName))
+	if (const auto MinimapGlobal = GetWorld()->GetGameState()->GetComponentByClass<UMinimapGlobal>())
 	{
-		if (FoundStruct->HotPointFoundMap.Find(HotPoint.IdentifyGuid) < 0)
+		if (UMinimapFastArrayLibrary::IsPoiFound(MinimapGlobal->PoiStateList, LevelName, PoiIndex))
 		{
-			FoundStruct->HotPointFoundMap.Add(HotPoint.IdentifyGuid);
-			Subsystem->OnHotPointFoundEvent.Broadcast(HotPoint);
+			return true;
+		}
+	}
+	
+	return UMinimapFastArrayLibrary::IsPoiFound(PoiStateList, LevelName, PoiIndex);
+}
+
+void UMinimapComponent_Player::FindHotPoint(const FString& LevelName, const FGuid& PoiIndex, bool Global)
+{
+	if (Global)
+	{
+		if (const auto MinimapGlobal = GetWorld()->GetGameState()->GetComponentByClass<UMinimapGlobal>())
+		{
+			UMinimapFastArrayLibrary::AddPoi(MinimapGlobal->PoiStateList, LevelName, PoiIndex);
 		}
 	}
 	else
 	{
-		auto NewStruct = FHotPointSaveGame();
-		NewStruct.HotPointFoundMap.Add(HotPoint.IdentifyGuid);
-		HotPointSaveGames.Add(LevelName, NewStruct);
-		Subsystem->OnHotPointFoundEvent.Broadcast(HotPoint);
+		UMinimapFastArrayLibrary::AddPoi(PoiStateList, LevelName, PoiIndex);
 	}
 }
 
 void UMinimapComponent_Player::SetMinimapRadius(const float Radius)
 {
 	MinimapRadius = Radius;
+}
+
+FMapPinBase UMinimapComponent_Player::GetShownMinimapPin(FGuid Guid, bool& Success) const
+{
+	if (!Guid.IsValid())
+	{
+		Success = false;
+		return FStaticMapPin();
+	}
+	
+	const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>();
+	const auto Static = Subsystem->GetRegisteredStaticMapPins();
+	auto NewStaticMapPins = Static;
+	for (auto RegisteredComp : Subsystem->GetRegisteredComponents())
+	{
+		if (RegisteredComp->MinimapGuid.IsValid() && RegisteredComp->ShouldVisible())
+		{
+			const auto StaticPtr = Static.IndexOfByPredicate([&](const FStaticMapPin& Pin)
+			{
+				return Pin.IdentifyGuid == RegisteredComp->MinimapGuid; 
+			});
+            
+			if (StaticPtr >= 0)
+			{
+				NewStaticMapPins[StaticPtr] = RegisteredComp->GetCurrentStaticMapPin();
+			}
+			else if (RegisteredComp->bIsIndividual)
+			{
+				NewStaticMapPins.Add(RegisteredComp->GetCurrentStaticMapPin());
+			}
+		}
+	}
+    
+	auto StaticPtr = NewStaticMapPins.FindByPredicate([&](const FStaticMapPin& Pin)
+	{
+		return Pin.IdentifyGuid == Guid; 
+	});
+
+	if (StaticPtr)
+	{
+		Success = true;
+		return *StaticPtr;
+	}
+
+	// Global first.
+	if (const auto CurrentMapData = Subsystem->CurrentMinimapMapData)
+	{
+		if (const auto HotPointInfo = CurrentMapData->HotPointInfos.Find(Guid))
+		{
+			Success = true;
+			return static_cast<FMapPinBase>(*HotPointInfo);
+		}
+	}
+
+	// Then check local.
+	if (const auto CurrentLocal = CurrentLocalMinimapData)
+	{
+		if (const auto HotPointInfo = CurrentLocal->HotPointInfos.Find(Guid))
+		{
+			Success = true;
+			return static_cast<FMapPinBase>(*HotPointInfo);
+		}
+	}
+
+	Success = false;
+	return FStaticMapPin();
 }
 
 void UMinimapComponent_Player::OnStaticRegistered(const FStaticMapPin& StaticMapPin)
@@ -586,6 +666,7 @@ void UMinimapComponent_Player::UpdateMinimapShownPins()
 	// Add pins guid and add always show pin
 	const auto StaticMapPins = GetRegisteredStaticMapPins();
 	const auto MinimapComponentRegistry = GetRegisteredMinimapComponents();
+	const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>();
 	
 	TArray<FGuid> MapPinsGuidArray;
 	for (auto Comp : MinimapComponentRegistry)
@@ -616,13 +697,19 @@ void UMinimapComponent_Player::UpdateMinimapShownPins()
 			AddMinimapPin(Pin.IdentifyGuid);
 		}
 	}
-    
+	// Using quad tree to get found hot points.
+	if (Subsystem && Subsystem->CurrentMinimapMapData)
+	{
+		const auto Data = Subsystem->CurrentMinimapMapData;
+		const auto OutHotPoints = Data->QueryRange(GetOwner()->GetActorLocation(), MinimapRadius);
+		MapPinsGuidArray.Append(OutHotPoints);
+	}
+	
 	// Update visible
 	for (auto MapPin : MapPinsGuidArray)
 	{
 		bool Success;
-		const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>();
-		const auto MapPinStruct = Subsystem->GetShownMinimapPin(MapPin, Success);
+		const auto MapPinStruct = GetShownMinimapPin(MapPin, Success);
 		if (Success)
 		{
 			if (FVector::Dist2D(GetOwner()->GetActorLocation(), MapPinStruct.Location) <= MinimapRadius / 2)
@@ -652,5 +739,46 @@ void UMinimapComponent_Player::RemoveMinimapPin(FGuid Guid)
 	{
 		OnMapPinHideOnMinimap.Broadcast(Guid);
 		ShownMapPinsGuids.Remove(Guid);
+	}
+}
+
+bool UMinimapComponent_Player::ShouldShowNavPath() const
+{
+	return bShouldUpdateNavQuery && bPathPointsValid;
+}
+
+void UMinimapComponent_Player::UpdateNavPath(const float& DeltaTime)
+{
+	// Update end position.
+	if (TempPin)
+	{
+		NavQueryEndPosition = TempPin->GetActorLocation();
+		bShouldUpdateNavQuery = true;
+	}
+	else
+	{
+		bShouldUpdateNavQuery = false;
+	}
+	
+	// Should update nav query.
+	if (bShouldUpdateNavQuery)
+	{
+		// Update nav query start position using local player actor location.
+		if (bAutoUpdateStartLocation)
+		{
+			NavQueryStartPosition = GetOwner()->GetActorLocation();
+		}
+		// Update nav query period. Using task to do async task update.
+		NavQueryTime += DeltaTime;
+		if (NavQueryTime >= NavQueryPeriod)
+		{
+			NavQueryTime = 0.0f;
+			UE::Tasks::Launch(UE_SOURCE_LOCATION, [this]()
+			{
+				FMinimapZoneGraphLanePath OutPath;
+				bPathPointsValid = UMinimapZoneGraphAStarLibrary::GetZoneGraphPathBP(this, NavQueryStartPosition, NavQueryEndPosition, NavQueryExtend, OutPath);
+				UMinimapZoneGraphAStarLibrary::GetPathPoints(this, OutPath, NavQueryOutPathPoints);
+			});
+		}
 	}
 }

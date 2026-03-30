@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "MinimapBaseUserWidget.h"
 #include "MinimapUserWidget.generated.h"
 
@@ -38,7 +39,7 @@ protected:
 	void UpdateViewAngle();
 	void UpdateLocalPlayerAngle();
 	void UpdateNorthWidgets();
-	void UpdateMarker(UMapPinUserWidget* MapPin, const FVector2D WorldPosition2D, const float Angle, const bool bRotate = true);
+	void UpdateMarker(UMapPinUserWidget* MapPin, FGameplayTag CategoryTag, FVector2D WorldPosition2D, float Angle, bool bRotate = true);
 	void UpdateMarkers();
 	void UpdateMinimapImageParameters();
 	

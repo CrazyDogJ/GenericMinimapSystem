@@ -2,8 +2,3 @@
 
 
 #include "MinimapStructs.h"
-
-bool FMinimapStruct::IsValid() const
-{
-	return !LevelName.IsEmpty();
-}

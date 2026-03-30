@@ -63,10 +63,10 @@ void UMinimapUserWidget::NativeDestruct()
 
 TSubclassOf<UMapPinUserWidget> UMinimapUserWidget::GetCustomClass(const FGuid& Guid)
 {
-	if (const auto Subsystem = GetMinimapSubsystem())
+	if (const auto LocalComp = GetLocalPlayerMinimapComponent())
 	{
 		bool bSuccess;
-		const auto MapStruct = Subsystem->GetShownMinimapPin(Guid, bSuccess);
+		const auto MapStruct = LocalComp->GetShownMinimapPin(Guid, bSuccess);
 		if (bSuccess)
 		{
 			if (MapStruct.CustomMinimapWidgetClass)
@@ -142,11 +142,23 @@ void UMinimapUserWidget::UpdateNorthWidgets()
 	}
 }
 
-void UMinimapUserWidget::UpdateMarker(UMapPinUserWidget* MapPin, const FVector2D WorldPosition2D,
+void UMinimapUserWidget::UpdateMarker(UMapPinUserWidget* MapPin, const FGameplayTag CategoryTag, const FVector2D WorldPosition2D,
 	const float Angle, const bool bRotate)
 {
 	if (MapPin)
 	{
+		if (const auto LocalComp = GetLocalPlayerMinimapComponent())
+		{
+			if (LocalComp->HiddenCategoryTags.Find(CategoryTag))
+			{
+				MapPin->SetVisibility(ESlateVisibility::Hidden);
+			}
+			else
+			{
+				MapPin->SetVisibility(ESlateVisibility::Visible);
+			}
+		}
+		
 		const auto WidgetPosition = GetWidgetPosition(WorldPosition2D);
 		MapPin->SetRenderTranslation(WidgetPosition);
 		MapPin->SetRenderTransformAngle(bRotate ? Angle : bLockNorth ? 0.0f : GetViewAngle());
@@ -160,14 +172,15 @@ void UMinimapUserWidget::UpdateMarkers()
 		GetMarkersOverlay()->SetRenderTransformAngle(bLockNorth ? 0.0f : GetViewAngle() * -1.0);
 	}
 	
-	const auto Subsystem = GetMinimapSubsystem();
+	const auto LocalComp = GetLocalPlayerMinimapComponent();
 	for (const auto Itr : Markers)
 	{
 		bool Success;
-		const auto Found = Subsystem->GetShownMinimapPin(Itr.Key, Success);
+		const auto Found = LocalComp->GetShownMinimapPin(Itr.Key, Success);
 		if (Success)
 		{
-			UpdateMarker(Itr.Value, FVector2D(Found.Location), Found.Yaw, Found.bHasRotation);
+			Itr.Value->MapPinInfo = Found;
+			UpdateMarker(Itr.Value, Found.CategoryTag, FVector2D(Found.Location), Found.Yaw, Found.bHasRotation);
 		}
 	}
 }

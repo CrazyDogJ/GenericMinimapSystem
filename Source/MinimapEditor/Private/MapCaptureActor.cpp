@@ -97,21 +97,42 @@ void AMapCaptureActor::CaptureMap()
 	StartCapture();
 }
 
-void AMapCaptureActor::SaveMapInfo(UMinimapMapData* NewDataAsset, const FString& Path, const FString& Name)
+void AMapCaptureActor::CaptureHotPoints() const
 {
-	if (NewDataAsset)
+	UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>();
+	if (auto Value = Settings->MapsInfos.Find(MapName))
 	{
-		if (UPackage* Package = CreatePackage(*Path))
+		if (UMinimapMapData* MapData = Value->LoadSynchronous())
 		{
-			NewDataAsset->Rename(*Name, Package);
+			WriteHotPoints(MapData);
+			// ReSharper disable once CppExpressionWithoutSideEffects
+			MapData->MarkPackageDirty();
+		}
+	}
+	else
+	{
+		Settings->LoadConfig(UMinimapSettings::StaticClass(), *Settings->GetDefaultConfigFilename());
+		FString AssetPath = Settings->MapTexturePath + "DA_" + MapName;
+		FString AssetName = "DA_" + MapName;
+		UPackage* Package = CreatePackage(*AssetPath);
+		if (UMinimapMapData* NewMapInfo = NewObject<UMinimapMapData>(Package, *AssetName, RF_Public | RF_Standalone))
+		{
+			WriteHotPoints(NewMapInfo);
+		}
+		// save mapper class
+		FString const PackageName = Package->GetName();
+		FString const PackageFileName = FPackageName::LongPackageNameToFilename(PackageName, FPackageName::GetAssetPackageExtension());
 
-			FAssetRegistryModule::AssetCreated(NewDataAsset);
-			FString PackageFilePath = FPackageName::LongPackageNameToFilename(Path, FPackageName::GetAssetPackageExtension());
-			FSavePackageArgs SaveArgs;
-			SaveArgs.TopLevelFlags = RF_Standalone;
-			UPackage::SavePackage(Package, NewDataAsset, *PackageFilePath, SaveArgs);
-
-			//UE_LOG(LogTemp, Log, TEXT("Data Asset created and saved successfully at: %s"), *Path);
+		FSavePackageArgs SaveArgs;
+		SaveArgs.TopLevelFlags = RF_Standalone;
+		SaveArgs.SaveFlags = SAVE_NoError;
+		UPackage::SavePackage(Package, nullptr, *PackageFileName, SaveArgs);
+		
+		auto SoftRef = TSoftObjectPtr<UMinimapMapData>(FSoftObjectPath(AssetPath + "." + AssetName));
+		if (!bLocalMap)
+		{
+			Settings->MapsInfos.Add(UGameplayStatics::GetCurrentLevelName(GetWorld()), SoftRef);
+			Settings->SaveConfig(CPF_Config, *Settings->GetDefaultConfigFilename());
 		}
 	}
 }
@@ -123,16 +144,34 @@ void AMapCaptureActor::WriteMapInfo(UMinimapMapData* DataAsset, UTexture2D* Tex)
 	DataAsset->MapTexture = Tex;
 	DataAsset->TextureSize = TextureScale;
 	DataAsset->CaptureActorLocation = GetActorLocation();
+}
+
+void AMapCaptureActor::WriteHotPoints(UMinimapMapData* DataAsset) const
+{
+	if (!DataAsset)
+	{
+		return;
+	}
+
+	DataAsset->Modify();
 	DataAsset->HotPointInfos.Empty();
 	TArray<AActor*> OutActors;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMapHotPointActor::StaticClass(), OutActors);
 	for (auto Actor : OutActors)
 	{
-		if (auto Point = Cast<AMapHotPointActor>(Actor))
+		if (const auto Point = Cast<AMapHotPointActor>(Actor))
 		{
-			DataAsset->HotPointInfos.Add(Point->Info);
+			DataAsset->HotPointInfos.Add(Point->Info.IdentifyGuid, Point->Info);
+			Point->Modify();
+			Point->HotPointLevelName = MapName;
+			// ReSharper disable once CppExpressionWithoutSideEffects
+			Point->MarkPackageDirty();
 		}
 	}
+
+	DataAsset->BuildHotPointsQuadTree();
+	// ReSharper disable once CppExpressionWithoutSideEffects
+	DataAsset->MarkPackageDirty();
 }
 
 void AMapCaptureActor::StartCapture()
@@ -205,6 +244,8 @@ void AMapCaptureActor::CaptureFinished()
 	// }
 
 	FCreateTexture2DParameters CreateTexture2DParameters = FCreateTexture2DParameters();
+	CreateTexture2DParameters.bVirtualTexture = true;
+	CreateTexture2DParameters.TextureGroup = TextureGroup::TEXTUREGROUP_UI;
 	
 	// Find or create package.
 	UPackage* MapTexturePackage = CreatePackage(*TotalFileName);

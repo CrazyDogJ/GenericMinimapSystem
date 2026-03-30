@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MinimapStructs.h"
 #include "Blueprint/UserWidget.h"
 #include "MapPinUserWidget.generated.h"
 
@@ -14,4 +15,7 @@ class MINIMAP_API UMapPinUserWidget : public UUserWidget
 public:
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Minimap", meta=(ExposeOnSpawn))
 	FGuid Guid;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Minimap", meta=(ExposeOnSpawn))
+	FMapPinBase MapPinInfo;
 };

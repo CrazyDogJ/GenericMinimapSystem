@@ -5,21 +5,13 @@
 #include "CoreMinimal.h"
 #include "InputMappingContext.h"
 #include "MinimapComponent.h"
+#include "MinimapFastArray.h"
 #include "MinimapComponent_Player.generated.h"
 
 class UMainMapUserWidget;
 class UMinimapUserWidget;
 
-USTRUCT(BlueprintType)
-struct FHotPointSaveGame
-{
-	GENERATED_BODY()
-
-public:
-	UPROPERTY(SaveGame)
-	TArray<FGuid> HotPointFoundMap;
-};
-
+/** Minimap save data struct for player component. */
 USTRUCT(BlueprintType)
 struct FMinimapSaveData
 {
@@ -33,7 +25,7 @@ public:
 	FVector TempPinLocation = FVector::ZeroVector;
 
 	UPROPERTY(SaveGame, BlueprintReadOnly)
-	TMap<FString, FHotPointSaveGame> HotPointSaveGames;
+	TMap<FString, FMinimapIndices> HotPointSaveGames;
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FShownMapPinEvent, FGuid, Guid);
@@ -75,9 +67,12 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	APawn* OwnerPawn;
 
-	UPROPERTY(BlueprintReadOnly)
-	TMap<FString, FHotPointSaveGame> HotPointSaveGames;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Replicated)
+	FPoiStateList PoiStateList;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	TSet<FGameplayTag> HiddenCategoryTags;
+	
 	UPROPERTY(BlueprintReadWrite, Replicated)
 	AMapPinActor* TempPin;
 
@@ -142,19 +137,22 @@ public:
 	void RemoveTempPinExec();
 
 	UFUNCTION(BlueprintCallable)
-	FMinimapSaveData GetSaveData();
+	FMinimapSaveData GetSaveData() const;
 	
 	UFUNCTION(BlueprintCallable)
 	void LoadSaveData(FMinimapSaveData inData, UTexture2D* MapMaskData);
 
 	UFUNCTION(BlueprintCallable, BlueprintPure)
 	bool HotPointCheck(FGuid Guid) const;
-	
-	UFUNCTION(BlueprintCallable, BlueprintPure)
-	bool IsHotPointFound(FGuid HotPointGuid) const;
 
 	UFUNCTION(BlueprintCallable)
-	void FindHotPoint(FHotPointInfo HotPointGuid);
+	TMap<FString, FMinimapIndices> GetFoundHotPoints() const;
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool IsHotPointFound(const FString& LevelName, const FGuid& PoiIndex) const;
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+	void FindHotPoint(const FString& LevelName, const FGuid& PoiIndex, bool Global);
 	
 	bool GetHitResultAtScreenPosition(const FVector2D ScreenPosition, const ECollisionChannel TraceChannel, const FCollisionQueryParams& CollisionQueryParams, FHitResult& HitResult) const;
 
@@ -233,23 +231,6 @@ public:
 	bool ShouldShowNavPath() const;
 
 	void UpdateNavPath(const float& DeltaTime);
-	// Nav query for background query.
-
-	// Zone Graph helper functions -------------------------------------------------------------------------------------
-	// TODO : These are not so important so we can do these in another thread.
-	/**
-	 * Get zone actor width by lane index
-	 */
-	static float GetZoneWidthByLaneIndex(const UObject* WorldContext, const FZoneGraphStorage& ZoneStorage, int32 LaneIndex);
-	
-	UFUNCTION(BlueprintCallable, meta=(WorldContext = "WorldContext"))
-	static bool GetZoneGraphPathBP(const UObject* WorldContext, FVector StartPosition, FVector DestPosition, FVector SearchExtent, FZoneGraphLanePath_BP& Path);
-
-	UFUNCTION(BlueprintCallable, meta=(WorldContext = "WorldContext"))
-	static bool GetPathPoints(const UObject* WorldContext, const FZoneGraphLanePath_BP& Path, TArray<FVector>& PathPoints);
-
-	static TArray<FVector> ConvertLaneToPoints(const FZoneGraphStorage& ZoneStorage, const FZoneGraphLaneLocation& InStartLocation, const FZoneGraphLaneLocation& InEndLocation);
-	// Zone Graph helper functions -------------------------------------------------------------------------------------
 #pragma endregion Nav Query
 
 #pragma region Minimap Widget
@@ -266,6 +247,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SetMinimapRadius(float Radius);
 
+	UFUNCTION(BlueprintPure)
+	FMapPinBase GetShownMinimapPin(FGuid Guid, bool& Success) const;
+	
 	//Helper functions
 	TArray<FGuid> GetShownMapPins() const { return ShownMapPinsGuids; }
 	void AddMinimapPin(FGuid Guid);

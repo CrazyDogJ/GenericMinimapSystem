@@ -35,10 +35,11 @@ public:
 	
 	UFUNCTION(CallInEditor)
 	void CaptureMap();
-
-	void SaveMapInfo(UMinimapMapData* NewDataAsset, const FString& Path, const FString& Name);
+	UFUNCTION(CallInEditor)
+	void CaptureHotPoints() const;
 
 	void WriteMapInfo(UMinimapMapData* DataAsset, UTexture2D* Tex);
+	void WriteHotPoints(UMinimapMapData* DataAsset) const;
 	
 	UPROPERTY(EditAnywhere)
 	USceneCaptureComponent2D* Capture2D;

@@ -8,32 +8,42 @@
 #include "StructUtils/InstancedStruct.h"
 #include "MinimapStructs.generated.h"
 
+class UMinimapMapData;
 class UMapPinUserWidget;
 
+/** Minimap indices container struct. */
 USTRUCT(BlueprintType)
-struct FMinimapStruct : public FTableRowBase
+struct FMinimapIndices
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	FString LevelName = FString(TEXT("Level Name Here"));
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, SaveGame)
+	TSet<FGuid> Indices;
+
+	bool Find(const FGuid& InIndex) const
+	{
+		return Indices.Contains(InIndex);
+	}
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	UTexture2D* MapTexture = nullptr;
+	bool Add(const FGuid& InIndex)
+	{
+		if (InIndex.IsValid())
+		{
+			if (Find(InIndex))
+			{
+				return false;
+			}
+			
+			Indices.Add(InIndex);
+			return true;
+		}
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	float MapSize = 0.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	float TextureSize = 0.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Minimap")
-	FVector CaptureActorLocation = FVector::ZeroVector;
-
-	bool IsValid() const;
+		return false;
+	}
 };
 
+/** Base struct for map pin info. */
 USTRUCT(BlueprintType)
 struct FMapPinBase
 {
@@ -96,12 +106,14 @@ public:
 	}
 };
 
+/** Static map pin struct. */
 USTRUCT(BlueprintType)
 struct FStaticMapPin : public FMapPinBase
 {
 	GENERATED_BODY()
 };
 
+/** Hot point map pin info struct. */
 USTRUCT(BlueprintType)
 struct FHotPointInfo : public FMapPinBase
 {

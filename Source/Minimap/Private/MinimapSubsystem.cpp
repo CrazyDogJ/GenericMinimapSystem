@@ -74,21 +74,6 @@ UMinimapMapData* UMinimapSubsystem::GetCurrentMinimapMapData()
         }
     	// Update virtual texture.
     	CurrentMinimapMapData->MapTexture->UpdateResource();
-        for (auto HotPoint : CurrentMinimapMapData->HotPointInfos)
-        {
-            FStaticMapPin NewPin;
-        	NewPin.Location = HotPoint.Location;
-        	NewPin.Yaw = 0.0f;
-        	NewPin.MapPinBrush = HotPoint.MapPinBrush;
-            NewPin.IdentifyGuid = HotPoint.IdentifyGuid;
-            NewPin.PinName = HotPoint.PinName;
-            NewPin.PinDescription = HotPoint.PinDescription;
-        	NewPin.CustomMinimapWidgetClass = HotPoint.CustomMinimapWidgetClass;
-        	NewPin.CustomMainmapWidgetClass = HotPoint.CustomMainmapWidgetClass;
-        	NewPin.CustomDatas = HotPoint.CustomDatas;
-        	
-            StaticMapPins.AddUnique(NewPin);
-        }
         return CurrentMinimapMapData;
     }
     
@@ -99,12 +84,7 @@ FHotPointInfo UMinimapSubsystem::GetHotPointInfoFromGuid(FGuid Guid, bool& bSucc
 {
     if (CurrentMinimapMapData && Guid.IsValid())
     {
-        auto Ptr = CurrentMinimapMapData->HotPointInfos.FindByPredicate([&] (const FHotPointInfo& HotPoint)
-        {
-           return HotPoint.IdentifyGuid == Guid;
-        });
-
-        if (Ptr)
+        if (const auto Ptr = CurrentMinimapMapData->HotPointInfos.Find(Guid))
         {
             bSuccess = true;
             return *Ptr;
@@ -113,51 +93,6 @@ FHotPointInfo UMinimapSubsystem::GetHotPointInfoFromGuid(FGuid Guid, bool& bSucc
 
     bSuccess = false;
     return FHotPointInfo();
-}
-
-FStaticMapPin UMinimapSubsystem::GetShownMinimapPin(FGuid Guid, bool& Success) const
-{
-    if (!Guid.IsValid())
-    {
-        Success = false;
-        return FStaticMapPin();
-    }
-	
-    auto NewStaticMapPins = StaticMapPins;
-    
-    for (auto RegisteredComp : MinimapComponentRegistry)
-    {
-        if (RegisteredComp->MinimapGuid.IsValid() && RegisteredComp->ShouldVisible())
-        {
-            auto StaticPtr = StaticMapPins.IndexOfByPredicate([&](const FStaticMapPin& Pin)
-            {
-               return Pin.IdentifyGuid == RegisteredComp->MinimapGuid; 
-            });
-            
-            if (StaticPtr >= 0)
-            {
-                NewStaticMapPins[StaticPtr] = RegisteredComp->GetCurrentStaticMapPin();
-            }
-            else if (RegisteredComp->bIsIndividual)
-            {
-                NewStaticMapPins.Add(RegisteredComp->GetCurrentStaticMapPin());
-            }
-        }
-    }
-    
-    auto StaticPtr = NewStaticMapPins.FindByPredicate([&](const FStaticMapPin& Pin)
-    {
-        return Pin.IdentifyGuid == Guid; 
-    });
-
-    if (StaticPtr)
-    {
-        Success = true;
-        return *StaticPtr;
-    }
-
-    Success = false;
-    return FStaticMapPin();
 }
 
 void UMinimapSubsystem::RegisterComponent(UMinimapComponent* Component)

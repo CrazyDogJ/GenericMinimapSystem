@@ -15,11 +15,14 @@ class MINIMAP_API AMapHotPointActor : public AActor
 public:
 	AMapHotPointActor();
 
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
+	FString HotPointLevelName = FString("");
+	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	FHotPointInfo Info;
 
-	UFUNCTION(BlueprintCallable)
-	void FoundThisMapHotPoint(UMinimapComponent_Player* Player);
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+	void FoundThisMapHotPoint(UMinimapComponent_Player* Player, bool Global);
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	USceneComponent* Root;
@@ -27,7 +30,7 @@ public:
 	UPROPERTY()
 	UTexture2D* DefaultTexture;
 	
-	UPROPERTY()
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly)
 	UBillboardComponent* BillboardComponent;
 #endif
 

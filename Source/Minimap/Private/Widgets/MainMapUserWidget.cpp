@@ -61,11 +61,11 @@ void UMainMapUserWidget::OnCompUnreg(UMinimapComponent* Component)
 	}
 }
 
-void UMainMapUserWidget::OnHotPointFound(const FHotPointInfo& HotPointInfo)
+void UMainMapUserWidget::OnHotPointFound(const FString& LevelName, const FGuid& Guid)
 {
-	if (!Markers.Find(HotPointInfo.IdentifyGuid))
+	if (!Markers.Find(Guid))
 	{
-		AddMapPin(HotPointInfo.IdentifyGuid);
+		AddMapPin(Guid);
 	}
 }
 
@@ -115,17 +115,25 @@ void UMainMapUserWidget::UpdateTransform() const
 
 void UMainMapUserWidget::UpdateMarkers()
 {
-	if (const auto Subsystem = GetMinimapSubsystem())
+	if (const auto LocalComp = GetLocalPlayerMinimapComponent())
 	{
 		for (const auto Marker : Markers)
 		{
 			bool bSuccess;
-			const auto Found = Subsystem->GetShownMinimapPin(Marker.Key, bSuccess);
+			const auto Found = LocalComp->GetShownMinimapPin(Marker.Key, bSuccess);
 			if (bSuccess)
 			{
+				Marker.Value->MapPinInfo = Found;
 				Marker.Value->SetRenderTranslation(WorldToWidget(FVector2D(Found.Location), Scale));
 				Marker.Value->SetRenderTransformAngle(Found.bHasRotation ? Found.Yaw : 0.0f);
-				Marker.Value->SetVisibility(IsMapPinVisible(Marker.Key) ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+				if (LocalComp->HiddenCategoryTags.Find(Found.CategoryTag))
+				{
+					Marker.Value->SetVisibility(ESlateVisibility::Hidden);
+				}
+				else
+				{
+					Marker.Value->SetVisibility(IsMapPinVisible(Marker.Key) ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
+				}
 			}
 		}
 	}
@@ -163,6 +171,17 @@ void UMainMapUserWidget::NativeConstruct()
 		{
 			OnStaticReg(Static);
 		}
+
+		for (const auto HotPoint : GetLocalPlayerMinimapComponent()->GetFoundHotPoints())
+		{
+			for (const auto Index : HotPoint.Value.Indices)
+			{
+				if (!Markers.Find(Index))
+				{
+					AddMapPin(Index);
+				}
+			}
+		}
 	}
 
 	ManageEvents(true);
@@ -196,10 +215,10 @@ void UMainMapUserWidget::NativeDestruct()
 
 TSubclassOf<UMapPinUserWidget> UMainMapUserWidget::GetCustomClass(const FGuid& Guid)
 {
-	if (const auto Subsystem = GetMinimapSubsystem())
+	if (const auto LocalComp = GetLocalPlayerMinimapComponent())
 	{
 		bool bSuccess;
-		const auto MapStruct = Subsystem->GetShownMinimapPin(Guid, bSuccess);
+		const auto MapStruct = LocalComp->GetShownMinimapPin(Guid, bSuccess);
 		if (bSuccess)
 		{
 			if (MapStruct.CustomMainmapWidgetClass)
