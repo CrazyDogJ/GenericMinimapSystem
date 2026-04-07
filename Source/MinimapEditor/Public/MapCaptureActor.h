@@ -50,18 +50,18 @@ public:
 	void StartCapture();
 	void CaptureNextTile();
 	void CaptureFinished();
-	
-	UPROPERTY(EditAnywhere)
-	int32 TilePower = 10;
 
-	UPROPERTY(VisibleAnywhere)
-	int32 TileSize = 1024;
+	UPROPERTY(EditAnywhere)
+	int32 LodCount = 1;
 	
 	UPROPERTY(EditAnywhere)
-	int32 Power = 12;
+	int32 TileAxisCount = 4;
+	
+	UPROPERTY(EditAnywhere)
+	int32 Power = 10;
 	
 	UPROPERTY(VisibleAnywhere)
-	int32 TextureScale = 4096;
+	int32 TextureScale = 1024;
 
 	UPROPERTY(EditAnywhere, meta = (MakeEditWidget))
 	FVector EndPoint = FVector(5,5,0);
@@ -76,4 +76,5 @@ protected:
 
 	virtual void OnConstruction(const FTransform& Transform) override;
 
+	UTexture* WriteTextureAsset(FString AssetName);
 };

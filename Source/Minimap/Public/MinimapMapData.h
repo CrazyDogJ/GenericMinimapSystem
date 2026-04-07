@@ -34,6 +34,21 @@ struct FSerializableQuadtreeNode
 	}
 };
 
+USTRUCT(BlueprintType)
+struct FMapLod
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	float Scale = 1.0;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	int32 AxisCount = 1;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	TArray<TSoftObjectPtr<UTexture2D>> LodTextures;
+};
+
 UCLASS(BlueprintType)
 class MINIMAP_API UMinimapMapData : public UDataAsset
 {
@@ -46,6 +61,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Minimap")
 	UTexture2D* MapTexture;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Minimap")
+	TArray<FMapLod> MapLods;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Minimap")
 	float MapSize;
 

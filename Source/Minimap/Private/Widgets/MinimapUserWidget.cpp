@@ -12,11 +12,14 @@ void UMinimapUserWidget::NativeConstruct()
 {
 	if (GetMinimapImageWidget() && GetCurrentMapData())
 	{
-		const auto DynMat = GetMinimapImageWidget()->GetDynamicMaterial();
-		const auto Texture = GetCurrentMapData()->MapTexture;
-		Texture->UpdateResource();
-		Texture->SetForceMipLevelsToBeResident(10.0f);
-		DynMat->SetTextureParameterValue("Map", GetCurrentMapData()->MapTexture);
+		if (const auto ImageWidget = Cast<UImage>(GetMinimapImageWidget()))
+		{
+			const auto Texture = GetCurrentMapData()->MapTexture;
+			Texture->UpdateResource();
+			Texture->SetForceMipLevelsToBeResident(10.0f);
+			const auto DynMat = ImageWidget->GetDynamicMaterial();
+			DynMat->SetTextureParameterValue("Map", GetCurrentMapData()->MapTexture);
+		}
 	}
 	
 	if (const auto MinimapPlayer = GetLocalPlayerMinimapComponent())
@@ -190,14 +193,17 @@ void UMinimapUserWidget::UpdateMinimapImageParameters()
 	if (GetMinimapImageWidget())
 	{
 		GetMinimapImageWidget()->SetRenderTransformAngle(bLockNorth ? 0.0f : GetViewAngle() * -1.0);
-		
-		if (const auto MatDyn = GetMinimapImageWidget()->GetDynamicMaterial(); MatDyn && GetCurrentMapData())
+
+		if (const auto ImageWidget = Cast<UImage>(GetMinimapImageWidget()))
 		{
-			const auto DeltaPosition = GetLocalPlayerTransform().GetLocation() - GetCurrentMapData()->CaptureActorLocation;
-			const float X = DeltaPosition.X / -GetCurrentMapData()->MapSize + 0.5;
-			const float Y = DeltaPosition.Y / GetCurrentMapData()->MapSize - 0.5;
-			MatDyn->SetVectorParameterValue("PlayerLocation", FVector(Y, X, 0.0f));
-			MatDyn->SetScalarParameterValue("Zoom", ZoomMultiplier);
+			if (const auto MatDyn = ImageWidget->GetDynamicMaterial(); MatDyn && GetCurrentMapData())
+			{
+				const auto DeltaPosition = GetLocalPlayerTransform().GetLocation() - GetCurrentMapData()->CaptureActorLocation;
+				const float X = DeltaPosition.X / -GetCurrentMapData()->MapSize + 0.5;
+				const float Y = DeltaPosition.Y / GetCurrentMapData()->MapSize - 0.5;
+				MatDyn->SetVectorParameterValue("PlayerLocation", FVector(Y, X, 0.0f));
+				MatDyn->SetScalarParameterValue("Zoom", ZoomMultiplier);
+			}
 		}
 	}
 }

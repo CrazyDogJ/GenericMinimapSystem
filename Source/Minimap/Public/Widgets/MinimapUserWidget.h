@@ -66,7 +66,7 @@ public:
 #pragma endregion
 #pragma region Implement Widgets
 	UFUNCTION(BlueprintImplementableEvent, Category = "Minimap|Widgets")
-	UImage* GetMinimapImageWidget() const;
+	UWidget* GetMinimapImageWidget() const;
 	
 	UFUNCTION(BlueprintImplementableEvent, Category = "Minimap|Widgets")
 	UWidget* GetViewAreaWidget() const;

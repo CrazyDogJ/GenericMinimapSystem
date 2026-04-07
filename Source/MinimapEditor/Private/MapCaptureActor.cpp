@@ -77,7 +77,7 @@ void AMapCaptureActor::CaptureMap()
 	TilePositions.Empty();
 	
 	// Setup something.
-	const int32 TilesPerAxis = TextureScale / TileSize;
+	const int32 TilesPerAxis = TileAxisCount;
 	const float TileWorldSize = EndPoint.X / TilesPerAxis;
 
 	// Loop capture.
@@ -183,7 +183,7 @@ void AMapCaptureActor::StartCapture()
 
 void AMapCaptureActor::CaptureNextTile()
 {
-	const int32 TilesPerAxis = TextureScale / TileSize;
+	const int32 TilesPerAxis = TileAxisCount;
 	const auto Array = TilePositions.Array();
 	if (Array.IsValidIndex(CurrentTileIndex))
 	{
@@ -194,32 +194,31 @@ void AMapCaptureActor::CaptureNextTile()
 		FTileCaptureResult Tile;
 		Tile.TileX = TilePos.Key.X;
 		Tile.TileY = TilesPerAxis - 1 - TilePos.Key.Y;
-		Tile.Size = TileSize;
+		Tile.Size = TextureScale;
 
-		ReadRenderTargetPixels(Capture2D->TextureTarget, Tile.Pixels);
-		AllTiles.Add(Tile);
+		FString TexName = "T_" + MapName
+			+ "_" + FString::Printf(TEXT("%d"), LodCount) + "_" + FString::Printf(TEXT("%dx%d"), Tile.TileX, Tile.TileY);
+		UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>();
+		FString TotalFileName = FPaths::Combine(Settings->MapTexturePath, TexName);
+
+		UKismetRenderingLibrary::RenderTargetCreateStaticTexture2DEditorOnly(Capture2D->TextureTarget, TotalFileName);
 	}
 	
 	CurrentTileIndex++;
-	if (CurrentTileIndex == Array.Num())
-	{
-		CaptureFinished();
-	}
-	else
+	if (CurrentTileIndex != Array.Num())
 	{
 		CaptureNextTile();
-		// GetWorld()->GetTimerManager().SetTimerForNextTick(this, &ThisClass::CaptureNextTile);
 	}
 }
 
 void AMapCaptureActor::CaptureFinished()
 {
-	const int32 TilesPerAxis = TextureScale / TileSize;
+	const int32 TilesPerAxis = TileAxisCount;
 	
 	// Stitch
 	TArray<FColor> FinalPixels;
 	int32 FinalSize;
-	StitchTiles(AllTiles, TilesPerAxis, TileSize, FinalPixels, FinalSize);
+	StitchTiles(AllTiles, TilesPerAxis, TextureScale, FinalPixels, FinalSize);
 
 	// Get texture name.
 	FString TexName = FString(TEXT("T_")) + MapName;
@@ -320,8 +319,6 @@ void AMapCaptureActor::OnConstruction(const FTransform& Transform)
 	{
 		MapName = UGameplayStatics::GetCurrentLevelName(GetWorld());
 	}
-	// Tile size
-	TileSize = FMath::Pow(static_cast<float>(2), static_cast<float>(TilePower));
 	// Texture size
 	TextureScale = FMath::Pow(static_cast<float>(2), static_cast<float>(Power));
 	// Square shape end point.
@@ -332,13 +329,36 @@ void AMapCaptureActor::OnConstruction(const FTransform& Transform)
 	if (!Capture2D->TextureTarget)
 	{
 		UTextureRenderTarget2D* RenderTarget = NewObject<UTextureRenderTarget2D>();
-		RenderTarget->InitAutoFormat(TileSize, TileSize);
+		RenderTarget->InitAutoFormat(TextureScale, TextureScale);
 		RenderTarget->ClearColor = FLinearColor::Black;
 		RenderTarget->UpdateResourceImmediate(true);
 		Capture2D->TextureTarget = RenderTarget;
 	}
 	else
 	{
-		Capture2D->TextureTarget->InitAutoFormat(TileSize, TileSize);
+		Capture2D->TextureTarget->InitAutoFormat(TextureScale, TextureScale);
 	}
+}
+
+UTexture* AMapCaptureActor::WriteTextureAsset(FString InName)
+{
+	UObject* NewObj = nullptr;
+	FText ErrorMessage;
+	NewObj = Capture2D->TextureTarget->ConstructTexture(
+		CreatePackage(*InName), InName, Capture2D->TextureTarget->GetMaskedFlags() | RF_Public | RF_Standalone, 
+		static_cast<EConstructTextureFlags>(CTF_Default | CTF_AllowMips | CTF_SkipPostEdit), /*InAlphaOverride = */nullptr, &ErrorMessage);
+	UTexture* NewTex = Cast<UTexture>(NewObj);
+	if (NewTex == nullptr)
+	{
+		FMessageLog("Blueprint").Warning(ErrorMessage);
+		return nullptr;
+	}
+	// package needs saving
+	// ReSharper disable once CppExpressionWithoutSideEffects
+	NewObj->MarkPackageDirty();
+	// Update Compression and Mip settings
+	NewTex->PostEditChange();
+	// Notify the asset registry
+	FAssetRegistryModule::AssetCreated(NewObj);
+	return NewTex;
 }
