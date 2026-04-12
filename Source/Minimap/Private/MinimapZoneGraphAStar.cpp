@@ -123,6 +123,12 @@ FMinimapZoneGraphAStarWrapper::FNodeRef FMinimapZoneGraphAStarWrapper::GetNeighb
 	const FZoneLaneData& Lane = ZoneGraph.Lanes[Node.NodeRef.LaneIndex];
 	const int32 LinkIndex = Lane.LinksBegin + NeighbourIndex;
 	const FZoneLaneLinkData& Link = ZoneGraph.LaneLinks[LinkIndex];
+
+	// End special location only leads to end location
+	if (Node.NodeRef == EndLocationSpecial)
+	{
+		return FMinimapZoneGraphLaneNodeRef(EndLocation.LaneHandle.Index, EndLocation.DistanceAlongLane);
+	}
 	
 	// Special(End node)
 	if (NeighbourIndex == Lane.GetLinkCount())
@@ -134,30 +140,17 @@ FMinimapZoneGraphAStarWrapper::FNodeRef FMinimapZoneGraphAStarWrapper::GetNeighb
 			return FMinimapZoneGraphLaneNodeRef(EndLocation.LaneHandle.Index, EndLocation.DistanceAlongLane);
 		}
 
-		// Special same zone with end
-		return EndLocationSpecial;
+		// Same lane with end special location
+		if (Node.NodeRef.LaneIndex == EndLocationSpecial.LaneIndex &&
+			Node.NodeRef.LaneDistance < EndLocationSpecial.LaneDistance)
+		{
+			return EndLocationSpecial;
+		}
 	}
 	
 	// Allow to pick left/right adjacent flags at start/end.
 	if (Link.Type == EZoneLaneLinkType::Adjacent)
 	{
-		// Adjacent end
-		if (Link.DestLaneIndex == EndLocation.LaneHandle.Index)
-		{
-			if (Node.NodeRef == EndLocationSpecial)
-			{
-				return FMinimapZoneGraphLaneNodeRef(EndLocation.LaneHandle.Index, EndLocation.DistanceAlongLane);
-			}
-
-			// Special fix.
-			if (StartLocationSpecial.LaneDistance < EndLocation.DistanceAlongLane)
-			{
-				return StartLocationSpecial;
-			}
-			
-			return EndLocationSpecial;
-		}
-		
 		// Adjacent start
 		if (Node.NodeRef.LaneIndex == StartLocation.LaneHandle.Index)
 		{
@@ -175,8 +168,9 @@ FMinimapZoneGraphAStarWrapper::FNodeRef FMinimapZoneGraphAStarWrapper::GetNeighb
 			return FMinimapZoneGraphLaneNodeRef(EndLocation.LaneHandle.Index, EndLocation.DistanceAlongLane);
 		}
 
-		const auto& EndLane = ZoneGraph.Lanes[EndLocation.LaneHandle.Index];
-		if (Lane.ZoneIndex == EndLane.ZoneIndex)
+		// Same lane with end special location
+		if (Node.NodeRef.LaneIndex == EndLocationSpecial.LaneIndex &&
+			Node.NodeRef.LaneDistance < EndLocationSpecial.LaneDistance)
 		{
 			return EndLocationSpecial;
 		}

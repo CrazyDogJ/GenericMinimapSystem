@@ -64,11 +64,6 @@ void UMapGridPanel::ReleaseSlateResources(bool bReleaseChildren)
 	MyMapGridPanel.Reset();
 }
 
-const FText UMapGridPanel::GetPaletteCategory()
-{
-	return Super::GetPaletteCategory();
-}
-
 TSharedRef<SWidget> UMapGridPanel::RebuildWidget()
 {
 	MyMapGridPanel = SNew(SMapGridPanel, AxisCount, Textures);

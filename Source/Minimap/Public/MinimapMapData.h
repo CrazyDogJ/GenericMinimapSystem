@@ -93,7 +93,7 @@ public:
 	
 #if WITH_EDITOR
 	FMinimapIndices* FindOrCreateCategory(const FGameplayTag& CategoryTag);
-	void BuildRecursive(TArray<FSerializableQuadtreeNode>& Nodes, const FBox2D& Bounds, const TArray<FGuid>& Indices, int32 Depth);
+	int32 BuildRecursive(TArray<FSerializableQuadtreeNode>& Nodes, const FBox2D& Bounds, const TArray<FGuid>& Indices, int32 Depth);
 	void BuildHotPointsQuadTree();
 #endif
 	

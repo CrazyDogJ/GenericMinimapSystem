@@ -81,7 +81,7 @@ FMinimapIndices* UMinimapMapData::FindOrCreateCategory(const FGameplayTag& Categ
 	return &CategoryMap.Add(CategoryTag);
 }
 
-void UMinimapMapData::BuildRecursive(TArray<FSerializableQuadtreeNode>& Nodes, const FBox2D& Bounds,
+int32 UMinimapMapData::BuildRecursive(TArray<FSerializableQuadtreeNode>& Nodes, const FBox2D& Bounds,
 	const TArray<FGuid>& Indices, int32 Depth)
 {
 	// Create new node
@@ -92,10 +92,10 @@ void UMinimapMapData::BuildRecursive(TArray<FSerializableQuadtreeNode>& Nodes, c
 	const auto Settings = GetDefault<UMinimapSettings>();
 	
 	// 1. 不分裂条件：Index数量 < 上限 或 已达最大深度
-	if (HotPointInfos.Num() <= Settings->MaxPOIPerNode || Depth >= Settings->MaxDepth)
+	if (Indices.Num() <= Settings->MaxPOIPerNode || Depth >= Settings->MaxDepth)
 	{
 		Node.Indices = Indices;
-		return;
+		return CurrentNodeIndex;
 	}
 
 	// 2. 需要分裂：计算四叉树中心点
@@ -104,24 +104,25 @@ void UMinimapMapData::BuildRecursive(TArray<FSerializableQuadtreeNode>& Nodes, c
 
 	// 3. 定义四个子区域（左上、右上、左下、右下）
 	FBox2D ChildBounds[4] = {
-		FBox2D(FVector2D(Bounds.Min.X, Bounds.Min.Y), FVector2D(CenterX, CenterY)), // 0: 左上
-		FBox2D(FVector2D(CenterX, Bounds.Min.Y), FVector2D(Bounds.Max.X, CenterY)), // 1: 右上
-		FBox2D(FVector2D(Bounds.Min.X, CenterY), FVector2D(CenterX, Bounds.Max.Y)), // 2: 左下
-		FBox2D(FVector2D(CenterX, CenterY), FVector2D(Bounds.Max.X, Bounds.Max.Y))  // 3: 右下
+		FBox2D(FVector2D(Bounds.Min.X, Bounds.Min.Y), FVector2D(CenterX, CenterY)),
+		FBox2D(FVector2D(CenterX, Bounds.Min.Y), FVector2D(Bounds.Max.X, CenterY)),
+		FBox2D(FVector2D(Bounds.Min.X, CenterY), FVector2D(CenterX, Bounds.Max.Y)),
+		FBox2D(FVector2D(CenterX, CenterY), FVector2D(Bounds.Max.X, Bounds.Max.Y)) 
 	};
 
 	// 4. 把Index分配到四个子区域
 	TArray<FGuid> ChildIndices[4];
-	for (const auto& Index : HotPointInfos)
+	for (const FGuid& Guid : Indices)
 	{
-		if (Index.Key.IsValid())
+		if (const auto* Found = HotPointInfos.Find(Guid))
 		{
-			const FVector2D Loc = FVector2D(Index.Value.Location);
+			const FVector2D Loc = FVector2D(Found->Location);
+
 			for (int32 i = 0; i < 4; ++i)
 			{
 				if (ChildBounds[i].IsInside(Loc))
 				{
-					ChildIndices[i].Add(Index.Key);
+					ChildIndices[i].Add(Guid);
 					break;
 				}
 			}
@@ -133,10 +134,12 @@ void UMinimapMapData::BuildRecursive(TArray<FSerializableQuadtreeNode>& Nodes, c
 	{
 		if (ChildIndices[i].Num() > 0)
 		{
-			BuildRecursive(Nodes, ChildBounds[i], ChildIndices[i], Depth + 1);
-			Node.Children[i] = Nodes.Num() - 1; // 记录子节点索引
+			int32 ChildNodeIndex = BuildRecursive(Nodes, ChildBounds[i], ChildIndices[i], Depth + 1);
+			Node.Children[i] = ChildNodeIndex; // 记录子节点索引
 		}
 	}
+	
+	return CurrentNodeIndex;
 }
 
 void UMinimapMapData::BuildHotPointsQuadTree()
