@@ -162,16 +162,7 @@ void UMainMapUserWidget::NativeConstruct()
 
 	if (const auto Subsystem = GetMinimapSubsystem())
 	{
-		for (const auto Comp : Subsystem->GetRegisteredComponents())
-		{
-			OnCompReg(Comp);
-		}
-
-		for (const auto Static : Subsystem->GetRegisteredStaticMapPins())
-		{
-			OnStaticReg(Static);
-		}
-
+		// Hot points bottom
 		for (const auto HotPoint : GetLocalPlayerMinimapComponent()->GetFoundHotPoints())
 		{
 			for (const auto Index : HotPoint.Value.Indices)
@@ -181,6 +172,18 @@ void UMainMapUserWidget::NativeConstruct()
 					AddMapPin(Index);
 				}
 			}
+		}
+
+		// Static middle
+		for (const auto Static : Subsystem->GetRegisteredStaticMapPins())
+		{
+			OnStaticReg(Static);
+		}
+
+		// Comp top.
+		for (const auto Comp : Subsystem->GetRegisteredComponents())
+		{
+			OnCompReg(Comp);
 		}
 	}
 

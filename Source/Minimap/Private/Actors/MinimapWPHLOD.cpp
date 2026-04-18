@@ -88,4 +88,29 @@ void AMinimapWPHLOD::SetVisibility(bool bIsVisible)
 			PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		}
 	});
+
+	// Manage child actors.
+	TArray<AActor*> ChildActors;
+	GetAttachedActors(ChildActors, true, true);
+	for (auto ChildActor : ChildActors)
+	{
+		ChildActor->SetHidden(!bIsVisible);
+		ChildActor->SetActorEnableCollision(bIsVisible);
+		ChildActor->ForEachComponent<UPrimitiveComponent>(false, [this, bIsVisible](UPrimitiveComponent* PrimitiveComponent)
+		{
+			if (bIsVisible)
+			{
+				PrimitiveComponent->SetVisibility(bIsVisible);
+				PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+				PrimitiveComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+				PrimitiveComponent->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+				PrimitiveComponent->SetCollisionResponseToChannel(ECC_Camera, ECR_Block);
+			}
+			else
+			{
+				PrimitiveComponent->SetVisibility(bIsVisible);
+				PrimitiveComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			}
+		});
+	}
 }
