@@ -47,6 +47,15 @@ void AMapHotPointActor::OnConstruction(const FTransform& Transform)
 	Super::OnConstruction(Transform);
 
 	Info.Location = GetActorLocation();
+	
+#if WITH_EDITOR
+	if (!Info.HotPointId.IsEmpty())
+	{
+		Info.PinName = FText::ChangeKey(FTextKey("MinimapPOI"), Info.HotPointId + "Name", Info.PinName);
+		Info.PinDescription = FText::ChangeKey(FTextKey("MinimapPOI"), Info.HotPointId + "Desc", Info.PinDescription);
+	}
+#endif
+	
 #if WITH_EDITORONLY_DATA
 	if (Info.MapPinBrush.GetResourceObject())
 	{
@@ -62,3 +71,35 @@ void AMapHotPointActor::OnConstruction(const FTransform& Transform)
 	}
 #endif
 }
+
+#if WITH_EDITOR
+void AMapHotPointActor::PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeChainProperty(PropertyChangedEvent);
+
+	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(FHotPointInfo, HotPointId))
+	{
+		if (!Info.HotPointId.IsEmpty())
+		{
+			Info.PinName = FText::ChangeKey(FTextKey("MinimapPOI"), Info.HotPointId + "Name", Info.PinName);
+			Info.PinDescription = FText::ChangeKey(FTextKey("MinimapPOI"), Info.HotPointId + "Desc", Info.PinDescription);
+		}
+	}
+	
+	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(FHotPointInfo, PinName))
+	{
+		if (!Info.HotPointId.IsEmpty())
+		{
+			Info.PinName = FText::ChangeKey(FTextKey("MinimapPOI"), Info.HotPointId + "Name", Info.PinName);
+		}
+	}
+
+	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(FHotPointInfo, PinDescription))
+	{
+		if (!Info.HotPointId.IsEmpty())
+		{
+			Info.PinDescription = FText::ChangeKey(FTextKey("MinimapPOI"), Info.HotPointId + "Desc", Info.PinDescription);
+		}
+	}
+}
+#endif

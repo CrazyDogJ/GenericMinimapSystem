@@ -45,13 +45,15 @@ void UMinimapSubsystem::RemoveStaticLocationPin(FGuid MapPinGuid)
 {
     FStaticMapPin Pin;
     Pin.IdentifyGuid = MapPinGuid;
-    auto Index = StaticMapPins.Find(Pin);
-    if (Index >= 0)
+    for (const auto Itr : StaticMapPins)
     {
-        auto Result = StaticMapPins[Index];
-        OnStaticUnregistered.Broadcast(Result);
-        StaticMapPins.Remove(Pin);
+        if (Itr.IdentifyGuid == MapPinGuid)
+        {
+            OnStaticUnregistered.Broadcast(Itr);
+        }
     }
+
+    StaticMapPins.Remove(Pin);
 }
 
 UMinimapMapData* UMinimapSubsystem::GetCurrentMinimapMapData()

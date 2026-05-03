@@ -37,6 +37,8 @@ public:
 	void CaptureMap();
 	UFUNCTION(CallInEditor)
 	void CaptureHotPoints() const;
+	UFUNCTION(CallInEditor)
+	void CaptureSingleMapTexture();
 
 	void WriteMapInfo(UMinimapMapData* DataAsset, UTexture2D* Tex);
 	void WriteHotPoints(UMinimapMapData* DataAsset) const;
@@ -51,6 +53,9 @@ public:
 	void CaptureNextTile();
 	void CaptureFinished();
 
+	UPROPERTY(EditAnywhere)
+	FIntPoint SingleCapture2D;
+	
 	UPROPERTY(EditAnywhere)
 	int32 LodCount = 1;
 	

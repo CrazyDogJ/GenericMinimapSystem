@@ -120,6 +120,10 @@ struct FHotPointInfo : public FMapPinBase
 	GENERATED_BODY()
 
 public:
+
+	// Used for localization text.
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	FString HotPointId;
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	bool bIsTeleportPoint = false;

@@ -137,6 +137,48 @@ void AMapCaptureActor::CaptureHotPoints() const
 	}
 }
 
+void AMapCaptureActor::CaptureSingleMapTexture()
+{
+	TilePositions.Empty();
+	
+	// Setup something.
+	const int32 TilesPerAxis = TileAxisCount;
+	const float TileWorldSize = EndPoint.X / TilesPerAxis;
+
+	// Loop capture.
+	Capture2D->OrthoWidth = EndPoint.X / TilesPerAxis;
+	for (int32 y = 0; y < TilesPerAxis; y++)
+	{
+		for (int32 x = 0; x < TilesPerAxis; x++)
+		{
+			FVector WorldPos = GetActorLocation()
+				+ GetActorRightVector() * (x + 0.5f) * TileWorldSize
+				+ GetActorForwardVector() * (y + 0.5f) * TileWorldSize;
+
+			TilePositions.Add(FIntPoint(x, y), WorldPos);
+		}
+	}
+
+	if (const auto Found = TilePositions.Find(SingleCapture2D))
+	{
+		const auto TilePos = *Found;
+		Capture2D->SetWorldLocation(TilePos);
+		Capture2D->CaptureScene();
+			
+		FTileCaptureResult Tile;
+		Tile.TileX = SingleCapture2D.X;
+		Tile.TileY = TilesPerAxis - 1 - SingleCapture2D.Y;
+		Tile.Size = TextureScale;
+
+		FString TexName = "T_" + MapName
+			+ "_" + FString::Printf(TEXT("%d"), LodCount) + "_" + FString::Printf(TEXT("%dx%d"), Tile.TileX, Tile.TileY);
+		UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>();
+		FString TotalFileName = FPaths::Combine(Settings->MapTexturePath, TexName);
+
+		UKismetRenderingLibrary::RenderTargetCreateStaticTexture2DEditorOnly(Capture2D->TextureTarget, TotalFileName);
+	}
+}
+
 void AMapCaptureActor::WriteMapInfo(UMinimapMapData* DataAsset, UTexture2D* Tex)
 {
 	DataAsset->LevelName = MapName;
