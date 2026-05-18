@@ -44,7 +44,7 @@ void UMinimapComponent_Player::ControllerChanged(const AController* NewControlle
 
 	const auto InputSubsystem = GetWorld()->GetFirstLocalPlayerFromController()->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
 	
-	if (NewController && NewController->IsLocalPlayerController())
+	if (!MinimapUserWidget && NewController && NewController->IsLocalPlayerController())
 	{
 		if (MinimapUserWidgetClass)
 		{
@@ -60,25 +60,26 @@ void UMinimapComponent_Player::ControllerChanged(const AController* NewControlle
 			InputSubsystem->AddMappingContext(Context, 0);
 		}
 	}
-	else
-	{
-		if (MinimapUserWidget)
-		{
-			MinimapUserWidget->RemoveFromParent();
-			MinimapUserWidget = nullptr;
-		}
-		if (MainMapUserWidget)
-		{
-			MainMapUserWidget->RemoveFromParent();
-			MainMapUserWidget = nullptr;
-		}
-		RemoveAdditionalWidgets();
-		if (InputSubsystem)
-		{
-			const auto Context = InputMappingContext.LoadSynchronous();
-			InputSubsystem->RemoveMappingContext(Context);
-		}
-	}
+	// Vehicle update
+	// else
+	// {
+	// 	if (MinimapUserWidget)
+	// 	{
+	// 		MinimapUserWidget->RemoveFromParent();
+	// 		MinimapUserWidget = nullptr;
+	// 	}
+	// 	if (MainMapUserWidget)
+	// 	{
+	// 		MainMapUserWidget->RemoveFromParent();
+	// 		MainMapUserWidget = nullptr;
+	// 	}
+	// 	RemoveAdditionalWidgets();
+	// 	if (InputSubsystem)
+	// 	{
+	// 		const auto Context = InputMappingContext.LoadSynchronous();
+	// 		InputSubsystem->RemoveMappingContext(Context);
+	// 	}
+	// }
 }
 
 UMinimapComponent_Player::UMinimapComponent_Player(const FObjectInitializer& ObjectInitializer)
