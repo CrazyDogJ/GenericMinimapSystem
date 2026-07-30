@@ -12,7 +12,25 @@ class USceneComponent;
 class UTextureRenderTarget2D;
 class UMinimapSettings;
 
-struct FTileCaptureResult
+USTRUCT(BlueprintType)
+struct MINIMAPEDITOR_API FMapCaptureSequence
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	FString SpecificFolder = "";
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	int32 LodIndex = 0;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	int32 TileAxisCount = 1;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	int32 ResolutionPower = 10;
+};
+
+struct MINIMAPEDITOR_API FTileCaptureResult
 {
 	int32 TileX;
 	int32 TileY;
@@ -33,15 +51,22 @@ public:
 	// Sets default values for this actor's properties
 	AMapCaptureActor(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 	
+	virtual void OnConstruction(const FTransform& Transform) override;
+
 	UFUNCTION(CallInEditor)
 	void CaptureMap();
 	UFUNCTION(CallInEditor)
 	void CaptureHotPoints() const;
 	UFUNCTION(CallInEditor)
 	void CaptureSingleMapTexture();
+	UFUNCTION(CallInEditor)
+	void CaptureMapSequence();
 
 	void WriteMapInfo(UMinimapMapData* DataAsset, UTexture2D* Tex);
 	void WriteHotPoints(UMinimapMapData* DataAsset) const;
+	
+	UPROPERTY(EditAnywhere)
+	TArray<FMapCaptureSequence> Sequences;
 	
 	UPROPERTY(EditAnywhere)
 	USceneCaptureComponent2D* Capture2D;
@@ -51,7 +76,6 @@ public:
 	TMap<FIntPoint, FVector> TilePositions;
 	void StartCapture();
 	void CaptureNextTile();
-	void CaptureFinished();
 
 	UPROPERTY(EditAnywhere)
 	FIntPoint SingleCapture2D;
@@ -74,12 +98,13 @@ public:
 	UPROPERTY(EditAnywhere)
 	bool bLocalMap = false;
 
+	UPROPERTY(EditAnywhere)
+	FString SpecificFolder = "";
+	
 	UPROPERTY(EditAnywhere, meta = (EditCondition=bLocalMap))
 	FString MapName;
 
 protected:
-
-	virtual void OnConstruction(const FTransform& Transform) override;
-
-	UTexture* WriteTextureAsset(FString AssetName);
+	static void OverwriteExistingTextureFromRenderTarget(UTexture2D* TargetTexture, UTextureRenderTarget2D* SourceRT);
+	static void CaptureMiniMapToPath(const FString& PackagePath, UTextureRenderTarget2D* SourceRT);
 };
