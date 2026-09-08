@@ -3,81 +3,72 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MinimapStructs.h"
+#include "MinimapFastArray.h"
 #include "MinimapSubsystem.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapComponentEvent, UMinimapComponent*, Component);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FStaticMapPinEvent, const FStaticMapPin&, StaticMapPin);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapUserSettingsChangedEvent, UMinimapUserSettings*, MinimapUserSettings);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHotPointFoundEvent, const FString&, LevelName, const FGuid&, Guid);
+class UMinimapGlobal;
 
-/**
- * 
- */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapUserSettingsChangedEvent, UMinimapUserSettings*, MinimapUserSettings);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHotPointChangeEvent, const FString&, LevelName, const FGuid&, Guid);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMapPinStateChangeEvent, const FGuid&, MapPinId);
+
 UCLASS(DisplayName = "Minimap Subsystem")
 class MINIMAP_API UMinimapSubsystem : public UWorldSubsystem
 {
 	GENERATED_BODY()
 	
 	friend class UMinimapComponent;
-protected:
-	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
-	virtual void Deinitialize() override;
 
 public:
 #pragma region Delegate
-	/* Called when actor with Minimap Component appears in the world */
-	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
-	FMinimapComponentEvent OnComponentRegistered;
-
-	/* Called when actor with Minimap Component disappears from the world */
-	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
-	FMinimapComponentEvent OnComponentUnregistered;
-
-	/* Called when static map pin add in the world */
-	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
-	FStaticMapPinEvent OnStaticRegistered;
-
-	/* Called when static map pin removed from the world */
-	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
-	FStaticMapPinEvent OnStaticUnregistered;
-
 	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
 	FMinimapUserSettingsChangedEvent OnMinimapUserSettingsChangedEvent;
 
 	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
-	FHotPointFoundEvent OnHotPointFoundEvent;
+	FHotPointChangeEvent OnHotPointFoundEvent;
 	
+	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
+	FHotPointChangeEvent OnHotPointRemoveEvent;
+	
+	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
+	FOnMapPinStateChangeEvent OnMapPinAddEvent;
+	
+	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
+	FOnMapPinStateChangeEvent OnMapPinRemoveEvent;
 #pragma endregion 
+	
 	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem")
 	UMinimapMapData* CurrentMinimapMapData;
 
 public:
 	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
-	TArray<UMinimapComponent*> GetRegisteredComponents() const;
+	FMapPinStateList GetLocalPinStateList() const;
 	
 	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
-	TArray<FStaticMapPin> GetRegisteredStaticMapPins() const;
+	FMapPinStateList GetGlobalPinStateList() const;
 
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
-	FGuid AddStaticLocationPin(FStaticMapPin InPin);
+	FGuid AddStaticMapPin(const FMapPinStateEntry& InEntry);
 	
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
-	void RemoveStaticLocationPin(FGuid MapPinGuid);
+	void RemoveStaticMapPin(FGuid MapPinGuid);
 
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
 	UMinimapMapData* GetCurrentMinimapMapData();
 
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
-	FHotPointInfo GetHotPointInfoFromGuid(FGuid Guid, bool& bSuccess);
+	bool GetHotPointInfoFromGuid(FGuid Guid, FPoiInfo& OutInfo);
 	
-	virtual void RegisterComponent(UMinimapComponent* Component);
-	virtual void UnregisterComponent(UMinimapComponent* Component);
-
+	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
+	UMinimapGlobal* GetMinimapGlobal() const;
+	
+	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
+	bool GetMapPinCurrentState(FGuid Id, FMapPinStateEntry& OutEntry);
+	
+	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
+	void SetMapPinCurrentState(const FMapPinStateEntry& InEntry);
+	
 protected:
-	/* All the Minimap Components currently existing in the world */
-	TArray<TObjectPtr<UMinimapComponent>> MinimapComponentRegistry;
-
-	/* All the static map pins in the world*/
-	TArray<FStaticMapPin> StaticMapPins;
+	/** Local pin state list */
+	FMapPinStateList LocalPinStateList;
 };

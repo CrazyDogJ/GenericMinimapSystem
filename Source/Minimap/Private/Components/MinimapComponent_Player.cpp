@@ -4,6 +4,7 @@
 #include "Components/MinimapComponent_Player.h"
 
 #include "EnhancedInputSubsystems.h"
+#include "MinimapMapData.h"
 #include "Actors/MapPinActor.h"
 #include "MinimapSettings.h"
 #include "MinimapZoneGraphAStar.h"
@@ -381,9 +382,8 @@ void UMinimapComponent_Player::BeginPlay()
 
 	if (const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>())
 	{
-		Subsystem->OnStaticRegistered.AddDynamic(this, &ThisClass::OnStaticRegistered);
-		Subsystem->OnStaticUnregistered.AddDynamic(this, &ThisClass::OnStaticUnregistered);
-		Subsystem->OnComponentUnregistered.AddDynamic(this, &ThisClass::OnComponentUnregistered);
+		Subsystem->OnMapPinAddEvent.AddDynamic(this, &ThisClass::OnMapPinAddEvent);
+		Subsystem->OnMapPinRemoveEvent.AddDynamic(this, &ThisClass::OnMapPinRemoveEvent);
 	}
 }
 
@@ -421,7 +421,7 @@ void UMinimapComponent_Player::PostLoad()
 	OwnerPawn = Cast<APawn>(GetOwner());
 }
 
-void UMinimapComponent_Player::NativeGetDisplayNameAndDescription(FText& DisplayName, FText& Description)
+void UMinimapComponent_Player::NativeGetDisplayNameAndDescription(FText& DisplayName, FText& Description) const
 {
 	if (OwnerPawn && OwnerPawn->GetPlayerState())
 	{
@@ -518,8 +518,8 @@ void UMinimapComponent_Player::LoadSaveData(FMinimapSaveData inData, UTexture2D*
 bool UMinimapComponent_Player::HotPointCheck(FGuid Guid) const
 {
 	const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>();
-	bool bIsHotPoint;
-	Subsystem->GetHotPointInfoFromGuid(Guid, bIsHotPoint);
+	FPoiInfo OutInfo;
+	bool bIsHotPoint = Subsystem->GetHotPointInfoFromGuid(Guid, OutInfo);
 	if (!bIsHotPoint)
 	{
 		return true;
@@ -578,126 +578,56 @@ void UMinimapComponent_Player::SetMinimapRadius(const float Radius)
 	MinimapRadius = Radius;
 }
 
-FMapPinBase UMinimapComponent_Player::GetShownMinimapPin(FGuid Guid, bool& Success) const
+bool UMinimapComponent_Player::GetMinimapPinState(FGuid Guid, FMapPinStateEntry& OutEntry) const
 {
 	if (!Guid.IsValid())
 	{
-		Success = false;
-		return FStaticMapPin();
+		OutEntry = FMapPinStateEntry();
+		return false;
 	}
 	
-	const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>();
-	const auto Static = Subsystem->GetRegisteredStaticMapPins();
-	auto NewStaticMapPins = Static;
-	for (auto RegisteredComp : Subsystem->GetRegisteredComponents())
+	if (const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>())
 	{
-		if (RegisteredComp->MinimapGuid.IsValid() && RegisteredComp->ShouldVisible())
+		if (Subsystem->GetMapPinCurrentState(Guid, OutEntry))
 		{
-			const auto StaticPtr = Static.IndexOfByPredicate([&](const FStaticMapPin& Pin)
-			{
-				return Pin.IdentifyGuid == RegisteredComp->MinimapGuid; 
-			});
-            
-			if (StaticPtr >= 0)
-			{
-				NewStaticMapPins[StaticPtr] = RegisteredComp->GetCurrentStaticMapPin();
-			}
-			else if (RegisteredComp->bIsIndividual)
-			{
-				NewStaticMapPins.Add(RegisteredComp->GetCurrentStaticMapPin());
-			}
+			return true;
+		}
+
+		FPoiInfo OutInfo;
+		if (Subsystem->GetHotPointInfoFromGuid(Guid, OutInfo))
+		{
+			OutEntry = static_cast<FMapPinStateEntry>(OutInfo);
+			return true;
 		}
 	}
-    
-	auto StaticPtr = NewStaticMapPins.FindByPredicate([&](const FStaticMapPin& Pin)
-	{
-		return Pin.IdentifyGuid == Guid; 
-	});
-
-	if (StaticPtr)
-	{
-		Success = true;
-		return *StaticPtr;
-	}
-
-	// Global first.
-	if (const auto CurrentMapData = Subsystem->CurrentMinimapMapData)
-	{
-		if (const auto HotPointInfo = CurrentMapData->HotPointInfos.Find(Guid))
-		{
-			Success = true;
-			return static_cast<FMapPinBase>(*HotPointInfo);
-		}
-	}
-
-	// Then check local.
-	if (const auto CurrentLocal = CurrentLocalMinimapData)
-	{
-		if (const auto HotPointInfo = CurrentLocal->HotPointInfos.Find(Guid))
-		{
-			Success = true;
-			return static_cast<FMapPinBase>(*HotPointInfo);
-		}
-	}
-
-	Success = false;
-	return FStaticMapPin();
-}
-
-void UMinimapComponent_Player::OnStaticRegistered(const FStaticMapPin& StaticMapPin)
-{
-	if (StaticMapPin.bAlwaysOnMinimap)
-	{
-		AddMinimapPin(StaticMapPin.IdentifyGuid);
-	}
-}
-
-void UMinimapComponent_Player::OnStaticUnregistered(const FStaticMapPin& StaticMapPin)
-{
-	RemoveMinimapPin(StaticMapPin.IdentifyGuid);
-}
-
-void UMinimapComponent_Player::OnComponentUnregistered(UMinimapComponent* Component)
-{
-	RemoveMinimapPin(Component->MinimapGuid);
+	
+	OutEntry = FMapPinStateEntry();
+	return false;
 }
 
 void UMinimapComponent_Player::UpdateMinimapShownPins()
 {
 	// Add pins guid and add always show pin
-	const auto StaticMapPins = GetRegisteredStaticMapPins();
-	const auto MinimapComponentRegistry = GetRegisteredMinimapComponents();
 	const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>();
 	
 	TArray<FGuid> MapPinsGuidArray;
-	for (auto Comp : MinimapComponentRegistry)
+	const auto LocalList = Subsystem->GetLocalPinStateList();
+	const auto GlobalList = Subsystem->GetGlobalPinStateList();
+	TArray<FMapPinStateEntry> TotalEntries;
+	TotalEntries.Append(LocalList.StateEntries);
+	TotalEntries.Append(GlobalList.StateEntries);
+	for (auto Entry : TotalEntries)
 	{
-		// ignore not visible component.
-		if (!Comp->ShouldVisible())
+		if (!Entry.bAlwaysOnMinimap)
 		{
-			continue;
-		}
-        
-		if (!Comp->bAlwaysShow)
-		{
-			MapPinsGuidArray.AddUnique(Comp->MinimapGuid);
-		}
-		else if (Comp->bIsIndividual)
-		{
-			AddMinimapPin(Comp->MinimapGuid);
-		}
-	}
-	for (auto Pin : StaticMapPins)
-	{
-		if (!Pin.bAlwaysOnMinimap)
-		{
-			MapPinsGuidArray.AddUnique(Pin.IdentifyGuid);
+			MapPinsGuidArray.AddUnique(Entry.Id);
 		}
 		else
 		{
-			AddMinimapPin(Pin.IdentifyGuid);
+			AddMinimapPin(Entry.Id);
 		}
 	}
+
 	// Using quad tree to get found hot points.
 	if (Subsystem && Subsystem->CurrentMinimapMapData)
 	{
@@ -707,13 +637,12 @@ void UMinimapComponent_Player::UpdateMinimapShownPins()
 	}
 	
 	// Update visible
-	for (auto MapPin : MapPinsGuidArray)
+	for (const auto MapPin : MapPinsGuidArray)
 	{
-		bool Success;
-		const auto MapPinStruct = GetShownMinimapPin(MapPin, Success);
-		if (Success)
+		FMapPinStateEntry OutEntry;
+		if (GetMinimapPinState(MapPin, OutEntry))
 		{
-			if (FVector::Dist2D(GetOwner()->GetActorLocation(), MapPinStruct.Location) <= MinimapRadius / 2)
+			if (FVector::Dist2D(GetOwner()->GetActorLocation(), OutEntry.Location) <= MinimapRadius / 2)
 			{
 				AddMinimapPin(MapPin);
 			}
@@ -741,6 +670,23 @@ void UMinimapComponent_Player::RemoveMinimapPin(FGuid Guid)
 		OnMapPinHideOnMinimap.Broadcast(Guid);
 		ShownMapPinsGuids.Remove(Guid);
 	}
+}
+
+void UMinimapComponent_Player::OnMapPinAddEvent(const FGuid& MapPinId)
+{
+	FMapPinStateEntry OutEntry;
+	if (GetMinimapPinState(MapPinId, OutEntry))
+	{
+		if (OutEntry.bAlwaysOnMinimap)
+		{
+			AddMinimapPin(MapPinId);
+		}
+	}
+}
+
+void UMinimapComponent_Player::OnMapPinRemoveEvent(const FGuid& MapPinId)
+{
+	RemoveMinimapPin(MapPinId);
 }
 
 bool UMinimapComponent_Player::ShouldShowNavPath() const

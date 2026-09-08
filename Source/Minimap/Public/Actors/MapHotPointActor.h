@@ -19,7 +19,7 @@ public:
 	FString HotPointLevelName = FString("");
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	FHotPointInfo Info;
+	FPoiInfo PoiInfo;
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	void FoundThisMapHotPoint(UMinimapComponent_Player* Player, bool Global);

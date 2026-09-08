@@ -3,6 +3,7 @@
 
 #include "Widgets/MinimapUserWidget.h"
 
+#include "MinimapMapData.h"
 #include "Components/MinimapComponent_Player.h"
 #include "Widgets/MapPinUserWidget.h"
 #include "Components/Image.h"
@@ -68,12 +69,11 @@ TSubclassOf<UMapPinUserWidget> UMinimapUserWidget::GetCustomClass(const FGuid& G
 {
 	if (const auto LocalComp = GetLocalPlayerMinimapComponent())
 	{
-		bool bSuccess;
-		const auto MapStruct = LocalComp->GetShownMinimapPin(Guid, bSuccess);
-		if (bSuccess)
+		FMapPinStateEntry OutEntry;
+		if (LocalComp->GetMinimapPinState(Guid, OutEntry))
 		{
-			if (MapStruct.CustomMinimapWidgetClass)
-				return MapStruct.CustomMinimapWidgetClass;
+			if (OutEntry.CustomMinimapWidgetClass)
+				return OutEntry.CustomMinimapWidgetClass;
 		}
 	}
 	
@@ -175,15 +175,12 @@ void UMinimapUserWidget::UpdateMarkers()
 		GetMarkersOverlay()->SetRenderTransformAngle(bLockNorth ? 0.0f : GetViewAngle() * -1.0);
 	}
 	
-	const auto LocalComp = GetLocalPlayerMinimapComponent();
 	for (const auto Itr : Markers)
 	{
-		bool Success;
-		const auto Found = LocalComp->GetShownMinimapPin(Itr.Key, Success);
-		if (Success)
+		FMapPinStateEntry OutEntry;
+		if (Itr.Value->GetMapPinState(OutEntry))
 		{
-			Itr.Value->MapPinInfo = Found;
-			UpdateMarker(Itr.Value, Found.CategoryTag, FVector2D(Found.Location), Found.Yaw, Found.bHasRotation);
+			UpdateMarker(Itr.Value, OutEntry.CategoryTag, FVector2D(OutEntry.Location), OutEntry.Yaw, OutEntry.bHasYaw);
 		}
 	}
 }

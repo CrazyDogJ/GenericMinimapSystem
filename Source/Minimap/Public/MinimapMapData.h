@@ -4,11 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
-#include "MinimapStructs.h"
+#include "MinimapFastArray.h"
 #include "Engine/DataAsset.h"
 #include "MinimapMapData.generated.h"
-
-struct FHotPointInfo;
 
 /** Minimap quad tree node. */
 USTRUCT(BlueprintType)
@@ -74,7 +72,7 @@ public:
 	FVector CaptureActorLocation;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Minimap")
-	TMap<FGuid, FHotPointInfo> HotPointInfos;
+	TMap<FGuid, FPoiInfo> HotPointInfos;
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Minimap", AdvancedDisplay)
 	TArray<FSerializableQuadtreeNode> QuadtreeNodes;

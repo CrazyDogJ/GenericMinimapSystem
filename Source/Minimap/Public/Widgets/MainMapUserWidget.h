@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "MinimapBaseUserWidget.h"
 #include "Components/MinimapComponent.h"
-#include "MinimapStructs.h"
 #include "MainMapUserWidget.generated.h"
 
 class UMapPinUserWidget;
@@ -28,15 +27,13 @@ protected:
 	UFUNCTION()
 	void OnValueChanged(float Value);
 	UFUNCTION()
-	void OnStaticReg(const FStaticMapPin& StaticMapPin);
+	void OnMapPinAddEvent(const FGuid& MapPinId);
 	UFUNCTION()
-	void OnStaticUnreg(const FStaticMapPin& StaticMapPin);
-	UFUNCTION()
-	void OnCompReg(UMinimapComponent* Component);
-	UFUNCTION()
-	void OnCompUnreg(UMinimapComponent* Component);
+	void OnMapPinRemoveEvent(const FGuid& MapPinId);
 	UFUNCTION()
 	void OnHotPointFound(const FString& LevelName, const FGuid& Guid);
+	UFUNCTION()
+	void OnHotPointRemove(const FString& LevelName, const FGuid& Guid);
 
 	void UpdateText() const;
 	void UpdateDragging();

@@ -7,6 +7,7 @@
 #include "MinimapSubsystem.h"
 #include "MinimapComponent.generated.h"
 
+class UMinimapGlobal;
 class UMinimapSubsystem;
 class AMapPinActor;
 
@@ -21,59 +22,54 @@ class MINIMAP_API UMinimapComponent : public UActorComponent
 
 public:	
 
-	// Properties for minimap static pin struct
+	/** Used to identify the component */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Replicated)
 	FGuid MinimapGuid;
-
-	/* If individual, minimap subsystem will treat it as a single map pin instance
-	 * else we use it override the static map pin, and it will disappear if static map pin was removed.
-	 **/
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Replicated)
-	bool bIsIndividual = true;
 	
-	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, meta=(ExposeOnSpawn))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ExposeOnSpawn))
 	FSlateBrush PinSlateBrush;
 
-	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite, meta=(ExposeOnSpawn))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(ExposeOnSpawn))
 	bool bAddToOverlay;
 
-	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FGameplayTag MinimapCategory;
 	
-	UPROPERTY(Replicated, BlueprintReadWrite)
+	UPROPERTY(BlueprintReadWrite)
 	int32 UniqueColorIndex = -1;
 	
-	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bRotate;
 
-	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bAlwaysShow;
-
-	//Get properties to struct
+	
 	UFUNCTION(BlueprintPure)
-	FStaticMapPin GetCurrentStaticMapPin() const;
-
-	UFUNCTION(BlueprintPure)
-	TArray<FStaticMapPin> GetRegisteredStaticMapPins() const;
-
-	UFUNCTION(BlueprintPure)
-	TArray<UMinimapComponent*> GetRegisteredMinimapComponents() const;
+	FMapPinStateEntry MakeMapPinEntry() const;
 	
 	UFUNCTION(BlueprintNativeEvent)
 	bool ShouldVisible();
 
 	UFUNCTION(BlueprintNativeEvent)
-	void GetDisplayNameAndDescription(FText& DisplayName, FText& Description);
+	void GetDisplayNameAndDescription(FText& DisplayName, FText& Description) const;
 	
-	virtual void NativeGetDisplayNameAndDescription(FText& DisplayName, FText& Description) {}
+	virtual void NativeGetDisplayNameAndDescription(FText& DisplayName, FText& Description) const {}
+	
+	void RegisterGlobalMinimap() const;
+	void UnregisterGlobalMinimap() const;
+
 //helper functions
 public:
+	UMinimapSubsystem* GetMinimapSubsystem() const;
 
 	UFUNCTION(BlueprintPure)
 	APlayerState* GetPlayerState() const;
 
 	UFUNCTION(BlueprintPure)
 	bool IsLocalControlled() const;
+	
+	UFUNCTION(BlueprintPure)
+	UMinimapGlobal* GetGlobalMinimapComponent() const;
 	
 protected:
 	// Called when the game starts

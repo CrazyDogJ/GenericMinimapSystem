@@ -10,11 +10,23 @@ UMinimapGlobal::UMinimapGlobal()
 	SetIsReplicatedByDefault(true);
 }
 
+void UMinimapGlobal::UpdatePinStateList()
+{
+	PinStateList.UpdateAllTransforms();
+}
+
 void UMinimapGlobal::BeginPlay()
 {
 	PoiStateList.WorldContextObject = this;
+	PinStateList.OwnerObject = this;
 	
 	Super::BeginPlay();
+
+	if (GetOwner()->HasAuthority())
+	{
+		GetWorld()->GetTimerManager().SetTimer(PinStateUpdateTimer, 
+			FTimerDelegate::CreateUObject(this, &ThisClass::UpdatePinStateList), PinStateUpdatePeriod, true);
+	}
 }
 
 void UMinimapGlobal::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -22,4 +34,5 @@ void UMinimapGlobal::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>&
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ThisClass, PoiStateList)
+	DOREPLIFETIME(ThisClass, PinStateList)
 }

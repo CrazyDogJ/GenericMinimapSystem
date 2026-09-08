@@ -4,6 +4,8 @@
 #include "Components/MinimapComponent.h"
 
 #include "MinimapSubsystem.h"
+#include "Components/MinimapGlobal.h"
+#include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
 #include "Net/UnrealNetwork.h"
 
@@ -22,45 +24,13 @@ UMinimapComponent::UMinimapComponent(const FObjectInitializer& ObjectInitializer
 void UMinimapComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(UMinimapComponent, PinSlateBrush);
-	DOREPLIFETIME(UMinimapComponent, bRotate);
-	DOREPLIFETIME(UMinimapComponent, bAlwaysShow);
-	DOREPLIFETIME(UMinimapComponent, UniqueColorIndex);
-	DOREPLIFETIME(UMinimapComponent, bAddToOverlay);
+	
+	DOREPLIFETIME(ThisClass, MinimapGuid)
 }
 
-FStaticMapPin UMinimapComponent::GetCurrentStaticMapPin() const
+UMinimapSubsystem* UMinimapComponent::GetMinimapSubsystem() const
 {
-	FStaticMapPin Result;
-	Result.IdentifyGuid = MinimapGuid;
-	Result.Location = GetOwner()->GetActorLocation();
-	Result.Yaw = GetOwner()->GetActorRotation().Yaw;
-	Result.bHasRotation = bRotate;
-	Result.CategoryTag = MinimapCategory;
-	Result.bAddToOverlay = bAddToOverlay;
-	Result.bAlwaysOnMinimap = bAlwaysShow;
-	Result.MapPinBrush = PinSlateBrush;
-	//TODO:Name and description;
-	return Result;
-}
-
-TArray<FStaticMapPin> UMinimapComponent::GetRegisteredStaticMapPins() const
-{
-	if (const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>())
-	{
-		return Subsystem->GetRegisteredStaticMapPins();
-	}
-	return TArray<FStaticMapPin>();
-}
-
-TArray<UMinimapComponent*> UMinimapComponent::GetRegisteredMinimapComponents() const
-{
-	if (const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>())
-	{
-		return Subsystem->GetRegisteredComponents();
-	}
-	return TArray<UMinimapComponent*>();
+	return GetWorld()->GetSubsystem<UMinimapSubsystem>();
 }
 
 bool UMinimapComponent::ShouldVisible_Implementation()
@@ -68,9 +38,65 @@ bool UMinimapComponent::ShouldVisible_Implementation()
 	return true;
 }
 
-void UMinimapComponent::GetDisplayNameAndDescription_Implementation(FText& DisplayName, FText& Description)
+void UMinimapComponent::GetDisplayNameAndDescription_Implementation(FText& DisplayName, FText& Description) const
 {
 	NativeGetDisplayNameAndDescription(DisplayName, Description);
+}
+
+FMapPinStateEntry UMinimapComponent::MakeMapPinEntry() const
+{
+	FMapPinStateEntry NewEntry;
+	NewEntry.Id = MinimapGuid;
+	if (const AActor* Owner = GetOwner())
+	{
+		NewEntry.ActorWeakPtr = Owner;
+		UE_LOG(LogTemp, Warning, TEXT("The actor weak ptr is : %s"), *NewEntry.ActorWeakPtr->GetName())
+	}
+	NewEntry.Brush = PinSlateBrush;
+	NewEntry.bHasYaw = bRotate;
+	NewEntry.bAddToOverlay = bAddToOverlay;
+	NewEntry.bAlwaysOnMinimap = bAlwaysShow;
+	NewEntry.CategoryTag = MinimapCategory;
+	GetDisplayNameAndDescription(NewEntry.PinName, NewEntry.PinDescription);
+	return NewEntry;
+}
+
+void UMinimapComponent::RegisterGlobalMinimap() const
+{
+	if (GetIsReplicated())
+	{
+		const auto MG = GetGlobalMinimapComponent();
+		if (MG && GetOwner()->HasAuthority())
+		{
+			MG->PinStateList.AddMapPinState(MakeMapPinEntry());
+		}
+	}
+	else
+	{
+		if (const auto MS = GetMinimapSubsystem())
+		{
+			MS->LocalPinStateList.AddMapPinState(MakeMapPinEntry());
+		}
+	}
+}
+
+void UMinimapComponent::UnregisterGlobalMinimap() const
+{
+	if (GetIsReplicated())
+	{
+		const auto MG = GetGlobalMinimapComponent();
+		if (MG && GetOwner()->HasAuthority())
+		{
+			MG->PinStateList.RemoveMapPinState(MinimapGuid);
+		}
+	}
+	else
+	{
+		if (const auto MS = GetMinimapSubsystem())
+		{
+			MS->LocalPinStateList.RemoveMapPinState(MinimapGuid);
+		}
+	}
 }
 
 APlayerState* UMinimapComponent::GetPlayerState() const
@@ -87,6 +113,19 @@ bool UMinimapComponent::IsLocalControlled() const
 	return Cast<APawn>(GetOwner())->IsLocallyControlled();
 }
 
+UMinimapGlobal* UMinimapComponent::GetGlobalMinimapComponent() const
+{
+	if (const auto World = GetWorld())
+	{
+		if (const auto GS = World->GetGameState())
+		{
+			return GS->GetComponentByClass<UMinimapGlobal>();
+		}
+	}
+	
+	return nullptr;
+}
+
 // Called when the game starts
 void UMinimapComponent::BeginPlay()
 {
@@ -98,18 +137,12 @@ void UMinimapComponent::BeginPlay()
 		MinimapGuid = FGuid::NewGuid();
 	}
 
-	if (const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>())
-	{
-		Subsystem->RegisterComponent(this);
-	}
+	RegisterGlobalMinimap();
 }
 
 void UMinimapComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>())
-	{
-		Subsystem->UnregisterComponent(this);
-	}
+	UnregisterGlobalMinimap();
 	
 	Super::EndPlay(EndPlayReason);
 }

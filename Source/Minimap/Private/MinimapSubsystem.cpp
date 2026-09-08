@@ -3,57 +3,42 @@
 
 #include "MinimapSubsystem.h"
 
-#include "Components/MinimapComponent.h"
+#include "MinimapMapData.h"
 #include "MinimapSettings.h"
+#include "Components/MinimapGlobal.h"
+#include "GameFramework/GameStateBase.h"
 #include "Kismet/GameplayStatics.h"
 
-void UMinimapSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+FMapPinStateList UMinimapSubsystem::GetLocalPinStateList() const
 {
-    Super::Initialize(Collection);
+    return LocalPinStateList;
 }
 
-void UMinimapSubsystem::Deinitialize()
+FMapPinStateList UMinimapSubsystem::GetGlobalPinStateList() const
 {
-    MinimapComponentRegistry.Empty();
-    StaticMapPins.Empty();
-	
-    Super::Deinitialize();
-}
-
-TArray<UMinimapComponent*> UMinimapSubsystem::GetRegisteredComponents() const
-{
-    return MinimapComponentRegistry;
-}
-
-TArray<FStaticMapPin> UMinimapSubsystem::GetRegisteredStaticMapPins() const
-{
-    return StaticMapPins;
-}
-
-FGuid UMinimapSubsystem::AddStaticLocationPin(FStaticMapPin InPin)
-{
-    if (!InPin.IdentifyGuid.IsValid())
+    if (const auto GS = GetMinimapGlobal())
     {
-        InPin.IdentifyGuid = FGuid::NewGuid();
+        return GS->PinStateList;
     }
-    StaticMapPins.Add(InPin);
-    OnStaticRegistered.Broadcast(InPin);
-    return InPin.IdentifyGuid;
+    
+    return FMapPinStateList();
 }
 
-void UMinimapSubsystem::RemoveStaticLocationPin(FGuid MapPinGuid)
+FGuid UMinimapSubsystem::AddStaticMapPin(const FMapPinStateEntry& InEntry)
 {
-    FStaticMapPin Pin;
-    Pin.IdentifyGuid = MapPinGuid;
-    for (const auto Itr : StaticMapPins)
+    auto Copy = InEntry;
+    if (!Copy.Id.IsValid())
     {
-        if (Itr.IdentifyGuid == MapPinGuid)
-        {
-            OnStaticUnregistered.Broadcast(Itr);
-        }
+        Copy.Id = FGuid::NewGuid();
     }
+    
+    LocalPinStateList.AddMapPinState(Copy);
+    return Copy.Id;
+}
 
-    StaticMapPins.Remove(Pin);
+void UMinimapSubsystem::RemoveStaticMapPin(FGuid MapPinGuid)
+{
+    LocalPinStateList.RemoveMapPinState(MapPinGuid);
 }
 
 UMinimapMapData* UMinimapSubsystem::GetCurrentMinimapMapData()
@@ -82,35 +67,48 @@ UMinimapMapData* UMinimapSubsystem::GetCurrentMinimapMapData()
     return nullptr;
 }
 
-FHotPointInfo UMinimapSubsystem::GetHotPointInfoFromGuid(FGuid Guid, bool& bSuccess)
+bool UMinimapSubsystem::GetHotPointInfoFromGuid(FGuid Guid, FPoiInfo& OutInfo)
 {
     if (CurrentMinimapMapData && Guid.IsValid())
     {
         if (const auto Ptr = CurrentMinimapMapData->HotPointInfos.Find(Guid))
         {
-            bSuccess = true;
-            return *Ptr;
+            OutInfo = *Ptr;
+            return true;
         }
     }
 
-    bSuccess = false;
-    return FHotPointInfo();
+    OutInfo = FPoiInfo();
+    return false;
 }
 
-void UMinimapSubsystem::RegisterComponent(UMinimapComponent* Component)
+UMinimapGlobal* UMinimapSubsystem::GetMinimapGlobal() const
 {
-    if (Component != nullptr)
+    if (const auto World = GetWorld())
     {
-        MinimapComponentRegistry.Add(Component);
-        OnComponentRegistered.Broadcast(Component);
+        if (const auto GS = World->GetGameState())
+        {
+            return GS->GetComponentByClass<UMinimapGlobal>();
+        }
     }
+    
+    return nullptr;
 }
 
-void UMinimapSubsystem::UnregisterComponent(UMinimapComponent* Component)
+bool UMinimapSubsystem::GetMapPinCurrentState(const FGuid Id, FMapPinStateEntry& OutEntry)
 {
-    if (Component != nullptr)
+    if (const auto MG = GetMinimapGlobal())
     {
-        OnComponentUnregistered.Broadcast(Component);
-        MinimapComponentRegistry.Remove(Component);
+        if (MG->PinStateList.GetCurrentState(Id, OutEntry))
+        {
+            return true;
+        }
     }
+    
+    return LocalPinStateList.GetCurrentState(Id, OutEntry);
+}
+
+void UMinimapSubsystem::SetMapPinCurrentState(const FMapPinStateEntry& InEntry)
+{
+    LocalPinStateList.SetMapPinState(InEntry);
 }

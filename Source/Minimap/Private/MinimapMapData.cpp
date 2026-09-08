@@ -4,7 +4,6 @@
 #include "MinimapMapData.h"
 
 #include "MinimapSettings.h"
-#include "MinimapStructs.h"
 
 
 TArray<FGuid> UMinimapMapData::QueryBox(FBox2D Box)
@@ -156,7 +155,7 @@ void UMinimapMapData::BuildHotPointsQuadTree()
 		if (Itr.Value.CategoryTag.IsValid())
 		{
 			const auto Category = FindOrCreateCategory(Itr.Value.CategoryTag);
-			Category->Indices.Add(Itr.Value.IdentifyGuid);
+			Category->Indices.Add(Itr.Value.Id);
 		}
 	}
 	

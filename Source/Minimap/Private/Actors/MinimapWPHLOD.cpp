@@ -31,6 +31,7 @@ void AMinimapWPHLOD::PreRegisterAllComponents()
 #if WITH_EDITOR
 void AMinimapWPHLOD::PreSave(FObjectPreSaveContext SaveContext)
 {
+	// ReSharper disable once CppReferenceToOverriddenVirtualFunction
 	AActor::PreSave(SaveContext);
 	
 	// Epic Games! We need query collision!

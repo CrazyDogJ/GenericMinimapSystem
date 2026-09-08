@@ -19,46 +19,17 @@ void UMainMapUserWidget::OnValueChanged(float Value)
 	UpdateText();
 }
 
-void UMainMapUserWidget::OnStaticReg(const FStaticMapPin& StaticMapPin)
+void UMainMapUserWidget::OnMapPinAddEvent(const FGuid& MapPinId)
 {
-	if (!Markers.Find(StaticMapPin.IdentifyGuid))
+	if (!Markers.Find(MapPinId))
 	{
-		AddMapPin(StaticMapPin.IdentifyGuid);
+		AddMapPin(MapPinId);
 	}
 }
 
-void UMainMapUserWidget::OnStaticUnreg(const FStaticMapPin& StaticMapPin)
+void UMainMapUserWidget::OnMapPinRemoveEvent(const FGuid& MapPinId)
 {
-	// If not exist, remove.
-	const auto Found = GetMinimapSubsystem()->GetRegisteredComponents().FindByPredicate([StaticMapPin](const UMinimapComponent* Component)
-	{
-		return Component->MinimapGuid == StaticMapPin.IdentifyGuid;
-	});
-	
-	if (!Found)
-	{
-		RemoveMapPin(StaticMapPin.IdentifyGuid);
-	}
-}
-
-void UMainMapUserWidget::OnCompReg(UMinimapComponent* Component)
-{
-	if (!Markers.Find(Component->MinimapGuid))
-	{
-		AddMapPin(Component->MinimapGuid);
-	}
-}
-
-void UMainMapUserWidget::OnCompUnreg(UMinimapComponent* Component)
-{
-	// If not has static, do not remove map pin.
-	auto NewMapPin = FStaticMapPin();
-	NewMapPin.IdentifyGuid = Component->MinimapGuid;
-	const auto Index = GetMinimapSubsystem()->GetRegisteredStaticMapPins().Find(NewMapPin);
-	if (Index == INDEX_NONE)
-	{
-		RemoveMapPin(Component->MinimapGuid);
-	}
+	RemoveMapPin(MapPinId);
 }
 
 void UMainMapUserWidget::OnHotPointFound(const FString& LevelName, const FGuid& Guid)
@@ -67,6 +38,11 @@ void UMainMapUserWidget::OnHotPointFound(const FString& LevelName, const FGuid& 
 	{
 		AddMapPin(Guid);
 	}
+}
+
+void UMainMapUserWidget::OnHotPointRemove(const FString& LevelName, const FGuid& Guid)
+{
+	RemoveMapPin(Guid);
 }
 
 void UMainMapUserWidget::UpdateText() const
@@ -119,14 +95,12 @@ void UMainMapUserWidget::UpdateMarkers()
 	{
 		for (const auto Marker : Markers)
 		{
-			bool bSuccess;
-			const auto Found = LocalComp->GetShownMinimapPin(Marker.Key, bSuccess);
-			if (bSuccess)
+			FMapPinStateEntry OutEntry;
+			if (Marker.Value->GetMapPinState(OutEntry))
 			{
-				Marker.Value->MapPinInfo = Found;
-				Marker.Value->SetRenderTranslation(WorldToWidget(FVector2D(Found.Location), Scale));
-				Marker.Value->SetRenderTransformAngle(Found.bHasRotation ? Found.Yaw : 0.0f);
-				if (LocalComp->HiddenCategoryTags.Find(Found.CategoryTag))
+				Marker.Value->SetRenderTranslation(WorldToWidget(FVector2D(OutEntry.Location), Scale));
+				Marker.Value->SetRenderTransformAngle(OutEntry.bHasYaw ? OutEntry.Yaw : 0.0f);
+				if (LocalComp->HiddenCategoryTags.Find(OutEntry.CategoryTag))
 				{
 					Marker.Value->SetVisibility(ESlateVisibility::Hidden);
 				}
@@ -173,17 +147,19 @@ void UMainMapUserWidget::NativeConstruct()
 				}
 			}
 		}
-
-		// Static middle
-		for (const auto Static : Subsystem->GetRegisteredStaticMapPins())
+		
+		const FMapPinStateList LocalList = Subsystem->GetLocalPinStateList();
+		const FMapPinStateList GlobalList = Subsystem->GetGlobalPinStateList();
+		TArray<FMapPinStateEntry> AllEntries;
+		AllEntries.Append(LocalList.StateEntries);
+		AllEntries.Append(GlobalList.StateEntries);
+		
+		for (const auto Entry : AllEntries)
 		{
-			OnStaticReg(Static);
-		}
-
-		// Comp top.
-		for (const auto Comp : Subsystem->GetRegisteredComponents())
-		{
-			OnCompReg(Comp);
+			if (!Markers.Find(Entry.Id))
+			{
+				AddMapPin(Entry.Id);
+			}
 		}
 	}
 
@@ -220,12 +196,11 @@ TSubclassOf<UMapPinUserWidget> UMainMapUserWidget::GetCustomClass(const FGuid& G
 {
 	if (const auto LocalComp = GetLocalPlayerMinimapComponent())
 	{
-		bool bSuccess;
-		const auto MapStruct = LocalComp->GetShownMinimapPin(Guid, bSuccess);
-		if (bSuccess)
+		FMapPinStateEntry OutEntry;
+		if (LocalComp->GetMinimapPinState(Guid, OutEntry))
 		{
-			if (MapStruct.CustomMainmapWidgetClass)
-				return MapStruct.CustomMainmapWidgetClass;
+			if (OutEntry.CustomMainmapWidgetClass)
+				return OutEntry.CustomMainmapWidgetClass;
 		}
 	}
 	
@@ -284,18 +259,13 @@ void UMainMapUserWidget::ManageEvents(bool bManage)
 	{
 		if (bManage)
 		{
-			Subsystem->OnStaticRegistered.AddDynamic(this, &ThisClass::OnStaticReg);
-			Subsystem->OnStaticUnregistered.AddDynamic(this, &ThisClass::OnStaticUnreg);
-			Subsystem->OnComponentRegistered.AddDynamic(this, &ThisClass::OnCompReg);
-			Subsystem->OnComponentUnregistered.AddDynamic(this, &ThisClass::OnCompUnreg);
+			Subsystem->OnMapPinAddEvent.AddDynamic(this, &ThisClass::OnMapPinAddEvent);
+			Subsystem->OnMapPinRemoveEvent.AddDynamic(this, &ThisClass::OnMapPinRemoveEvent);
 			Subsystem->OnHotPointFoundEvent.AddDynamic(this, &ThisClass::OnHotPointFound);
+			Subsystem->OnHotPointRemoveEvent.AddDynamic(this, &ThisClass::OnHotPointRemove);
 		}
 		else
 		{
-			Subsystem->OnStaticRegistered.RemoveAll(this);
-			Subsystem->OnStaticUnregistered.RemoveAll(this);
-			Subsystem->OnComponentRegistered.RemoveAll(this);
-			Subsystem->OnComponentUnregistered.RemoveAll(this);
 			Subsystem->OnHotPointFoundEvent.RemoveAll(this);
 		}
 	}

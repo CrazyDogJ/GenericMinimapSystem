@@ -9,13 +9,11 @@
 #include "Components/SceneComponent.h"
 #include "MinimapSettings.h"
 #include "TextureResource.h"
-#include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/Texture2D.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Logging/MessageLog.h"
-#include "Subsystems/EditorAssetSubsystem.h"
 #include "UObject/SavePackage.h"
 
 // Sets default values
@@ -182,7 +180,7 @@ void AMapCaptureActor::WriteHotPoints(UMinimapMapData* DataAsset) const
 	{
 		if (const auto Point = Cast<AMapHotPointActor>(Actor))
 		{
-			DataAsset->HotPointInfos.Add(Point->Info.IdentifyGuid, Point->Info);
+			DataAsset->HotPointInfos.Add(Point->PoiInfo.Id, Point->PoiInfo);
 			Point->Modify();
 			Point->HotPointLevelName = MapName;
 			// ReSharper disable once CppExpressionWithoutSideEffects

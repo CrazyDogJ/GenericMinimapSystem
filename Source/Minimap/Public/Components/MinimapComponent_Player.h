@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "InputMappingContext.h"
 #include "MinimapComponent.h"
-#include "MinimapFastArray.h"
 #include "MinimapComponent_Player.generated.h"
 
 class UMainMapUserWidget;
@@ -57,7 +56,7 @@ protected:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void PostLoad() override;
-	virtual void NativeGetDisplayNameAndDescription(FText& DisplayName, FText& Description) override;
+	virtual void NativeGetDisplayNameAndDescription(FText& DisplayName, FText& Description) const override;
 	
 public:
 	// Properties
@@ -248,7 +247,7 @@ public:
 	void SetMinimapRadius(float Radius);
 
 	UFUNCTION(BlueprintPure)
-	FMapPinBase GetShownMinimapPin(FGuid Guid, bool& Success) const;
+	bool GetMinimapPinState(FGuid Guid, FMapPinStateEntry& OutEntry) const;
 	
 	//Helper functions
 	TArray<FGuid> GetShownMapPins() const { return ShownMapPinsGuids; }
@@ -260,13 +259,10 @@ protected:
 	TArray<FGuid> ShownMapPinsGuids;
 
 	UFUNCTION()
-	void OnStaticRegistered(const FStaticMapPin& StaticMapPin);
+	void OnMapPinAddEvent(const FGuid& MapPinId);
 
 	UFUNCTION()
-	void OnStaticUnregistered(const FStaticMapPin& StaticMapPin);
-	
-	UFUNCTION()
-	void OnComponentUnregistered(UMinimapComponent* Component);
+	void OnMapPinRemoveEvent(const FGuid& MapPinId);
     	
 	void UpdateMinimapShownPins();
 	

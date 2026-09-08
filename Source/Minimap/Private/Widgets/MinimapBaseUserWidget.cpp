@@ -37,14 +37,12 @@ void UMinimapBaseUserWidget::AddMapPin(FGuid Guid)
 	
 	bool bConstructCalled = false;
 	const auto Function =
-		[this, Guid, &bConstructCalled, LocalPlayerComp](UUserWidget* WidgetObject, const TSharedRef<SWidget>& Content)
+		[this, Guid, &bConstructCalled](UUserWidget* WidgetObject, const TSharedRef<SWidget>& Content)
 		{
 			if (UMapPinUserWidget* NewMapPin = Cast<UMapPinUserWidget>(WidgetObject))
 			{
 				NewMapPin->Guid = Guid;
 				bConstructCalled = true;
-				bool bSuccess;
-				NewMapPin->MapPinInfo = LocalPlayerComp->GetShownMinimapPin(Guid, bSuccess);
 			}
 			
 			return SNew(SObjectWidget, WidgetObject)[Content];
@@ -57,8 +55,6 @@ void UMinimapBaseUserWidget::AddMapPin(FGuid Guid)
 		if (!bConstructCalled)
 		{
 			NewPin->Guid = Guid;
-			bool bSuccess;
-			NewPin->MapPinInfo = LocalPlayerComp->GetShownMinimapPin(Guid, bSuccess);
 		}
 		GetMarkersOverlay()->AddChildToOverlay(NewPin);
 		Markers.Add(Guid, NewPin);

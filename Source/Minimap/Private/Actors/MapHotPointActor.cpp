@@ -26,9 +26,9 @@ AMapHotPointActor::AMapHotPointActor()
 #endif
 	
 	PrimaryActorTick.bCanEverTick = false;
-	if (!Info.IdentifyGuid.IsValid())
+	if (!PoiInfo.Id.IsValid())
 	{
-		Info.IdentifyGuid = FGuid::NewGuid();
+		PoiInfo.Id = FGuid::NewGuid();
 	}
 }
 
@@ -39,30 +39,31 @@ void AMapHotPointActor::FoundThisMapHotPoint(UMinimapComponent_Player* PlayerCom
 		return;
 	}
 
-	PlayerComp->FindHotPoint(HotPointLevelName, Info.IdentifyGuid, Global);
+	PlayerComp->FindHotPoint(HotPointLevelName, PoiInfo.Id, Global);
 }
 
 void AMapHotPointActor::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
-	Info.Location = GetActorLocation();
+	PoiInfo.ActorWeakPtr = this;
+	PoiInfo.Location = GetActorLocation();
 	
 #if WITH_EDITOR
-	if (!Info.HotPointId.IsEmpty())
+	if (!PoiInfo.HotPointId.IsEmpty())
 	{
-		Info.PinName = FText::ChangeKey(FTextKey("MinimapPOI"), Info.HotPointId + "Name", Info.PinName);
-		Info.PinDescription = FText::ChangeKey(FTextKey("MinimapPOI"), Info.HotPointId + "Desc", Info.PinDescription);
+		PoiInfo.PinName = FText::ChangeKey(FTextKey("MinimapPOI"), PoiInfo.HotPointId + "Name", PoiInfo.PinName);
+		PoiInfo.PinDescription = FText::ChangeKey(FTextKey("MinimapPOI"), PoiInfo.HotPointId + "Desc", PoiInfo.PinDescription);
 	}
 #endif
 	
 #if WITH_EDITORONLY_DATA
-	if (Info.MapPinBrush.GetResourceObject())
+	if (PoiInfo.Brush.GetResourceObject())
 	{
-		if (const auto Tex = Cast<UTexture2D>(Info.MapPinBrush.GetResourceObject()))
+		if (const auto Tex = Cast<UTexture2D>(PoiInfo.Brush.GetResourceObject()))
 		{
 			BillboardComponent->SetSprite(Tex);
-			BillboardComponent->ScreenSize = Info.MapPinBrush.ImageSize.X;
+			BillboardComponent->ScreenSize = PoiInfo.Brush.ImageSize.X;
 		}
 	}
 	else
@@ -77,28 +78,28 @@ void AMapHotPointActor::PostEditChangeChainProperty(struct FPropertyChangedChain
 {
 	Super::PostEditChangeChainProperty(PropertyChangedEvent);
 
-	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(FHotPointInfo, HotPointId))
+	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(FPoiInfo, HotPointId))
 	{
-		if (!Info.HotPointId.IsEmpty())
+		if (!PoiInfo.HotPointId.IsEmpty())
 		{
-			Info.PinName = FText::ChangeKey(FTextKey("MinimapPOI"), Info.HotPointId + "Name", Info.PinName);
-			Info.PinDescription = FText::ChangeKey(FTextKey("MinimapPOI"), Info.HotPointId + "Desc", Info.PinDescription);
+			PoiInfo.PinName = FText::ChangeKey(FTextKey("MinimapPOI"), PoiInfo.HotPointId + "Name", PoiInfo.PinName);
+			PoiInfo.PinDescription = FText::ChangeKey(FTextKey("MinimapPOI"), PoiInfo.HotPointId + "Desc", PoiInfo.PinDescription);
 		}
 	}
 	
-	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(FHotPointInfo, PinName))
+	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(FPoiInfo, PinName))
 	{
-		if (!Info.HotPointId.IsEmpty())
+		if (!PoiInfo.HotPointId.IsEmpty())
 		{
-			Info.PinName = FText::ChangeKey(FTextKey("MinimapPOI"), Info.HotPointId + "Name", Info.PinName);
+			PoiInfo.PinName = FText::ChangeKey(FTextKey("MinimapPOI"), PoiInfo.HotPointId + "Name", PoiInfo.PinName);
 		}
 	}
 
-	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(FHotPointInfo, PinDescription))
+	if (PropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(FPoiInfo, PinDescription))
 	{
-		if (!Info.HotPointId.IsEmpty())
+		if (!PoiInfo.HotPointId.IsEmpty())
 		{
-			Info.PinDescription = FText::ChangeKey(FTextKey("MinimapPOI"), Info.HotPointId + "Desc", Info.PinDescription);
+			PoiInfo.PinDescription = FText::ChangeKey(FTextKey("MinimapPOI"), PoiInfo.HotPointId + "Desc", PoiInfo.PinDescription);
 		}
 	}
 }
