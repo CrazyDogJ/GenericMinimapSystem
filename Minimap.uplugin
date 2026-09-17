@@ -28,15 +28,15 @@
 	],
 	"Plugins": [
 		{
-			"Name": "EditorScriptingUtilities",
-			"Enabled": true
-		},
-		{
 			"Name": "ZoneGraph",
 			"Enabled": true
 		},
 		{
 			"Name": "EnhancedInput",
+			"Enabled": true
+		},
+		{
+			"Name": "NetRelevantObject",
 			"Enabled": true
 		}
 	]

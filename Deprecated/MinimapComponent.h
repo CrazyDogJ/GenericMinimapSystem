@@ -7,6 +7,7 @@
 #include "MinimapSubsystem.h"
 #include "MinimapComponent.generated.h"
 
+class UMinimapPinData;
 class UMinimapGlobal;
 class UMinimapSubsystem;
 class AMapPinActor;
@@ -21,7 +22,7 @@ class MINIMAP_API UMinimapComponent : public UActorComponent
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:	
-
+#pragma region Properties
 	/** Used to identify the component */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Replicated)
 	FGuid MinimapGuid;
@@ -44,6 +45,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bAlwaysShow;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced)
+	TObjectPtr<UMinimapPinData> MinimapPinData;
+	
+#pragma endregion
+	
 	UFUNCTION(BlueprintPure)
 	FMapPinStateEntry MakeMapPinEntry() const;
 	
@@ -55,8 +61,14 @@ public:
 	
 	virtual void NativeGetDisplayNameAndDescription(FText& DisplayName, FText& Description) const {}
 	
-	void RegisterGlobalMinimap() const;
-	void UnregisterGlobalMinimap() const;
+	UFUNCTION(BlueprintNativeEvent)
+	void RegisterPinState() const;
+	
+	UFUNCTION(BlueprintNativeEvent)
+	void UnregisterPinState() const;
+	
+	virtual void NativeRegisterPinState() const;
+	virtual void NativeUnregisterPinState() const;
 
 //helper functions
 public:

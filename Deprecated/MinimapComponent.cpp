@@ -18,6 +18,8 @@ UMinimapComponent::UMinimapComponent(const FObjectInitializer& ObjectInitializer
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 
 	SetIsReplicatedByDefault(true);
+	
+	// MinimapPinData = NewObject<UMinimapPinData>(this, NAME_None, RF_NoFlags);
 }
 
 
@@ -26,6 +28,38 @@ void UMinimapComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	DOREPLIFETIME(ThisClass, MinimapGuid)
+}
+
+void UMinimapComponent::RegisterPinState_Implementation() const
+{
+	NativeRegisterPinState();
+}
+
+void UMinimapComponent::UnregisterPinState_Implementation() const
+{
+	NativeUnregisterPinState();
+}
+
+void UMinimapComponent::NativeRegisterPinState() const
+{
+	if (GetOwner()->HasAuthority())
+	{
+		if (const auto MG = GetGlobalMinimapComponent())
+		{
+			MG->PinDataList.AddPinData(FMinimapPinDataEntry(GetOwner(), MinimapPinData));
+		}
+	}
+}
+
+void UMinimapComponent::NativeUnregisterPinState() const
+{
+	if (GetOwner()->HasAuthority())
+	{
+		if (const auto MG = GetGlobalMinimapComponent())
+		{
+			MG->PinDataList.RemovePinData(FMinimapPinDataEntry(GetOwner(), MinimapPinData));
+		}
+	}
 }
 
 UMinimapSubsystem* UMinimapComponent::GetMinimapSubsystem() const
@@ -59,44 +93,6 @@ FMapPinStateEntry UMinimapComponent::MakeMapPinEntry() const
 	NewEntry.CategoryTag = MinimapCategory;
 	GetDisplayNameAndDescription(NewEntry.PinName, NewEntry.PinDescription);
 	return NewEntry;
-}
-
-void UMinimapComponent::RegisterGlobalMinimap() const
-{
-	if (GetIsReplicated())
-	{
-		const auto MG = GetGlobalMinimapComponent();
-		if (MG && GetOwner()->HasAuthority())
-		{
-			MG->PinStateList.AddMapPinState(MakeMapPinEntry());
-		}
-	}
-	else
-	{
-		if (const auto MS = GetMinimapSubsystem())
-		{
-			MS->LocalPinStateList.AddMapPinState(MakeMapPinEntry());
-		}
-	}
-}
-
-void UMinimapComponent::UnregisterGlobalMinimap() const
-{
-	if (GetIsReplicated())
-	{
-		const auto MG = GetGlobalMinimapComponent();
-		if (MG && GetOwner()->HasAuthority())
-		{
-			MG->PinStateList.RemoveMapPinState(MinimapGuid);
-		}
-	}
-	else
-	{
-		if (const auto MS = GetMinimapSubsystem())
-		{
-			MS->LocalPinStateList.RemoveMapPinState(MinimapGuid);
-		}
-	}
 }
 
 APlayerState* UMinimapComponent::GetPlayerState() const
@@ -137,12 +133,12 @@ void UMinimapComponent::BeginPlay()
 		MinimapGuid = FGuid::NewGuid();
 	}
 
-	RegisterGlobalMinimap();
+	RegisterPinState();
 }
 
 void UMinimapComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	UnregisterGlobalMinimap();
+	UnregisterPinState();
 	
 	Super::EndPlay(EndPlayReason);
 }

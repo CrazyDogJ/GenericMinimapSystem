@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "MinimapBaseUserWidget.h"
-#include "Components/MinimapComponent.h"
 #include "MainMapUserWidget.generated.h"
 
 class UMapPinUserWidget;
@@ -12,9 +11,9 @@ class UOverlay;
 class UMinimapMapData;
 class UImage;
 class UMinimapSubsystem;
-class UMinimapComponent_Player;
 class UTextBlock;
 class USlider;
+
 /**
  * 
  */
@@ -23,6 +22,9 @@ class MINIMAP_API UMainMapUserWidget : public UMinimapBaseUserWidget
 {
 	GENERATED_BODY()
 
+public:
+	UMainMapUserWidget(const FObjectInitializer& ObjectInitializer);
+	
 protected:
 	UFUNCTION()
 	void OnValueChanged(float Value);
@@ -35,16 +37,20 @@ protected:
 	UFUNCTION()
 	void OnHotPointRemove(const FString& LevelName, const FGuid& Guid);
 
+	void InitializeSlider() const;
+	void InitializeMapTexture();
+	void InitializeMapPins();
+	
 	void UpdateText() const;
 	void UpdateDragging();
 	void UpdateTransform() const;
 	void UpdateMarkers();
 	
+	void ReleaseAllMarkers();
+	
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	virtual void NativeDestruct() override;
-
-	virtual TSubclassOf<UMapPinUserWidget> GetCustomClass(const FGuid& Guid) override;
 
 	// Mouse Input
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
@@ -52,6 +58,8 @@ protected:
 	// Mouse Input
 	
 	void ManageEvents(bool bManage);
+	
+	void AddTempPin(const FVector2D Location, const UMinimapMapData* MapData, const ECollisionChannel TraceChannel) const;
 	
 public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Minimap|Settings")
@@ -81,6 +89,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Minimap|State")
 	FVector2D Offset;
 	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Minimap|Settings")
+	FSlateBrush TempPinBrush;
+	
 	UFUNCTION(BlueprintImplementableEvent, Category = "Minimap|Widgets")
 	USlider* GetSliderWidget() const;
 
@@ -91,7 +102,7 @@ public:
 	UWidget* GetMapRootWidget() const;
 	
 	UFUNCTION(BlueprintImplementableEvent, Category = "Minimap|Widgets")
-	UImage* GetImageWidget() const;
+	UWidget* GetImageWidget() const;
 
 	UFUNCTION(BlueprintNativeEvent, Category = "Minimap|Widgets")
 	bool IsMapPinVisible(FGuid Guid);

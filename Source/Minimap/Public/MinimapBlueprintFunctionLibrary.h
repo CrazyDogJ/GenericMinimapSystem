@@ -9,8 +9,8 @@
 #include "MinimapBlueprintFunctionLibrary.generated.h"
 
 class UMainMapUserWidget;
-class UMinimapComponent_Player;
 class APlayerController;
+
 /**
  * 
  */

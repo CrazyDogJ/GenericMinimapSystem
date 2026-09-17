@@ -155,7 +155,7 @@ void UMinimapMapData::BuildHotPointsQuadTree()
 		if (Itr.Value.CategoryTag.IsValid())
 		{
 			const auto Category = FindOrCreateCategory(Itr.Value.CategoryTag);
-			Category->Indices.Add(Itr.Value.Id);
+			Category->Indices.Add(Itr.Value.HotPointId);
 		}
 	}
 	

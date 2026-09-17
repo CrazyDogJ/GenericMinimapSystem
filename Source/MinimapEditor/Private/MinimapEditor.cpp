@@ -9,10 +9,6 @@
 
 void FMinimapEditorModule::StartupModule()
 {
-	// Settings register
-	//FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	//PropertyModule.RegisterCustomClassLayout(USplineWidget::StaticClass()->GetFName(), FOnGetDetailCustomizationInstance::CreateStatic(&FSplineWidgetDetailCustomization::MakeInstance));
-
 	if (ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings"))
 	{
 		SettingsModule->RegisterSettings("Project", "Plugins", "Minimap", LOCTEXT("RuntimeSettingsName", "Minimap"), LOCTEXT("RuntimeSettingsDescription", "Configure minimap"), GetMutableDefault<UMinimapSettings>());
@@ -25,10 +21,6 @@ void FMinimapEditorModule::ShutdownModule()
 	{
 		return;
 	}
-
-	// Settings unregister
-	//FPropertyEditorModule& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
-	//PropertyModule.UnregisterCustomClassLayout(USplineWidget::StaticClass()->GetFName());
 
 	if (ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings"))
 	{

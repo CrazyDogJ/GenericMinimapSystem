@@ -62,7 +62,7 @@ public:
 	UFUNCTION(CallInEditor)
 	void CaptureMapSequence();
 
-	void WriteMapInfo(UMinimapMapData* DataAsset, UTexture2D* Tex);
+	void WriteMapInfo(UMinimapMapData* DataAsset);
 	void WriteHotPoints(UMinimapMapData* DataAsset) const;
 	
 	UPROPERTY(EditAnywhere)

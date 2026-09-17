@@ -3,15 +3,25 @@
 
 #include "Widgets/MainMapUserWidget.h"
 
-#include "Components/MinimapComponent_Player.h"
+#include "MinimapMapData.h"
+#include "MinimapSettings.h"
 #include "MinimapSubsystem.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/Image.h"
+#include "Components/MinimapGlobal.h"
 #include "Components/Overlay.h"
 #include "Components/Slider.h"
 #include "Components/TextBlock.h"
+#include "GameFramework/GameStateBase.h"
 #include "Widgets/MapPinUserWidget.h"
 #include "Widgets/MinimapUserWidget.h"
+#include "Widgets/MinimapWidgetInterface.h"
+
+UMainMapUserWidget::UMainMapUserWidget(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
+{
+	MarkerClassType = TYPE_MAINMAP;
+}
 
 void UMainMapUserWidget::OnValueChanged(float Value)
 {
@@ -21,10 +31,7 @@ void UMainMapUserWidget::OnValueChanged(float Value)
 
 void UMainMapUserWidget::OnMapPinAddEvent(const FGuid& MapPinId)
 {
-	if (!Markers.Find(MapPinId))
-	{
-		AddMapPin(MapPinId);
-	}
+	AddMapPin(MapPinId);
 }
 
 void UMainMapUserWidget::OnMapPinRemoveEvent(const FGuid& MapPinId)
@@ -34,15 +41,55 @@ void UMainMapUserWidget::OnMapPinRemoveEvent(const FGuid& MapPinId)
 
 void UMainMapUserWidget::OnHotPointFound(const FString& LevelName, const FGuid& Guid)
 {
-	if (!Markers.Find(Guid))
-	{
-		AddMapPin(Guid);
-	}
+	AddMapPin(Guid);
 }
 
 void UMainMapUserWidget::OnHotPointRemove(const FString& LevelName, const FGuid& Guid)
 {
 	RemoveMapPin(Guid);
+}
+
+void UMainMapUserWidget::InitializeSlider() const
+{
+	if (const auto Slider = GetSliderWidget())
+	{
+		Slider->SetMinValue(MinScale);
+		Slider->SetMaxValue(MaxScale);
+		Slider->SetValue(Scale);
+	}
+}
+
+void UMainMapUserWidget::InitializeMapTexture()
+{
+	if (const auto MapImage = GetImageWidget())
+	{
+		if (const auto Image = Cast<UImage>(MapImage))
+		{
+			MaterialInstance = Image->GetDynamicMaterial();
+			// TODO : LocalMapDataFeature : Do function that switch to local map later
+			if (const auto Data = GetCurrentGlobalMapData())
+			{
+				MaterialInstance->SetTextureParameterValue("Map", Data->MapTexture);
+			}
+		}
+	}
+}
+
+void UMainMapUserWidget::InitializeMapPins()
+{
+	if (const auto Interface = TryGetDataInterface())
+	{
+		TSet<FGuid> TotalPins;
+		TSet<FGuid> HotPoints;
+		Interface->GetRegisteredMapPins(TotalPins);
+		Interface->GetFoundHotPoints(HotPoints);
+		TotalPins.Append(HotPoints);
+		
+		for (const auto Itr : TotalPins)
+		{
+			AddMapPin(Itr);
+		}
+	}
 }
 
 void UMainMapUserWidget::UpdateText() const
@@ -91,78 +138,48 @@ void UMainMapUserWidget::UpdateTransform() const
 
 void UMainMapUserWidget::UpdateMarkers()
 {
-	if (const auto LocalComp = GetLocalPlayerMinimapComponent())
+	if (const auto Interface = TryGetDataInterface())
 	{
 		for (const auto Marker : Markers)
 		{
-			FMapPinStateEntry OutEntry;
-			if (Marker.Value->GetMapPinState(OutEntry))
+			FVector OutLocation;
+			bool HasLocation = Interface->GetLocation(Marker.Key, OutLocation);
+			float Yaw;
+			bool HasYaw = Interface->GetYaw(Marker.Key, Yaw);
+			if (HasLocation)
 			{
-				Marker.Value->SetRenderTranslation(WorldToWidget(FVector2D(OutEntry.Location), Scale));
-				Marker.Value->SetRenderTransformAngle(OutEntry.bHasYaw ? OutEntry.Yaw : 0.0f);
-				if (LocalComp->HiddenCategoryTags.Find(OutEntry.CategoryTag))
-				{
-					Marker.Value->SetVisibility(ESlateVisibility::Hidden);
-				}
-				else
-				{
-					Marker.Value->SetVisibility(IsMapPinVisible(Marker.Key) ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
-				}
+				Marker.Value->SetRenderTranslation(WorldToWidget(FVector2D(OutLocation), Scale));
+			}
+			Marker.Value->SetRenderTransformAngle(HasYaw ? Yaw : 0.0f);
+			if (ShouldHide(Marker.Key))
+			{
+				Marker.Value->SetVisibility(ESlateVisibility::Hidden);
+			}
+			else
+			{
+				Marker.Value->SetVisibility(IsMapPinVisible(Marker.Key) ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
 			}
 		}
 	}
 }
 
+void UMainMapUserWidget::ReleaseAllMarkers()
+{
+	// Clear widgets on destruct.
+	for (auto Itr : Markers)
+	{
+		Itr.Value->RemoveFromParent();
+		WidgetPool.Release(Itr.Value);
+	}
+	Markers.Empty();
+}
+
 void UMainMapUserWidget::NativeConstruct()
 {
-	if (const auto Slider = GetSliderWidget())
-	{
-		Slider->SetMinValue(MinScale);
-		Slider->SetMaxValue(MaxScale);
-		Slider->SetValue(Scale);
-	}
-
+	InitializeSlider();
 	UpdateText();
-	
-	if (const auto MapImage = GetImageWidget())
-	{
-		MaterialInstance = MapImage->GetDynamicMaterial();
-		// TODO : Do function that switch to local map later
-		if (const auto Data = GetCurrentGlobalMapData())
-		{
-			MaterialInstance->SetTextureParameterValue("Map", Data->MapTexture);
-		}
-	}
-
-	if (const auto Subsystem = GetMinimapSubsystem())
-	{
-		// Hot points bottom
-		for (const auto HotPoint : GetLocalPlayerMinimapComponent()->GetFoundHotPoints())
-		{
-			for (const auto Index : HotPoint.Value.Indices)
-			{
-				if (!Markers.Find(Index))
-				{
-					AddMapPin(Index);
-				}
-			}
-		}
-		
-		const FMapPinStateList LocalList = Subsystem->GetLocalPinStateList();
-		const FMapPinStateList GlobalList = Subsystem->GetGlobalPinStateList();
-		TArray<FMapPinStateEntry> AllEntries;
-		AllEntries.Append(LocalList.StateEntries);
-		AllEntries.Append(GlobalList.StateEntries);
-		
-		for (const auto Entry : AllEntries)
-		{
-			if (!Markers.Find(Entry.Id))
-			{
-				AddMapPin(Entry.Id);
-			}
-		}
-	}
-
+	InitializeMapTexture();
+	InitializeMapPins();
 	ManageEvents(true);
 	SetFocus();
 
@@ -181,30 +198,9 @@ void UMainMapUserWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 void UMainMapUserWidget::NativeDestruct()
 {
 	ManageEvents(false);
-	// Clear widgets on destruct.
-	for (auto Itr : Markers)
-	{
-		Itr.Value->RemoveFromParent();
-		WidgetPool.Release(Itr.Value);
-	}
-	Markers.Empty();
+	ReleaseAllMarkers();
 
 	Super::NativeDestruct();
-}
-
-TSubclassOf<UMapPinUserWidget> UMainMapUserWidget::GetCustomClass(const FGuid& Guid)
-{
-	if (const auto LocalComp = GetLocalPlayerMinimapComponent())
-	{
-		FMapPinStateEntry OutEntry;
-		if (LocalComp->GetMinimapPinState(Guid, OutEntry))
-		{
-			if (OutEntry.CustomMainmapWidgetClass)
-				return OutEntry.CustomMainmapWidgetClass;
-		}
-	}
-	
-	return Super::GetCustomClass(Guid);
 }
 
 FReply UMainMapUserWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
@@ -212,7 +208,7 @@ FReply UMainMapUserWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, 
 	if (InMouseEvent.IsMouseButtonDown(DragKey))
 	{
 		bMouseDragging = true;
-		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+		return FReply::Handled();
 	}
 
 	const auto MapImageWidget = GetImageWidget();
@@ -220,15 +216,11 @@ FReply UMainMapUserWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, 
 	{
 		const auto ScreenPosition = InMouseEvent.GetScreenSpacePosition();
 		const auto Local = MapImageWidget->GetCachedGeometry().AbsoluteToLocal(ScreenPosition);
-		if (const auto LocalPlayerComp = GetLocalPlayerMinimapComponent())
-		{
-			LocalPlayerComp->AddTempPin_MainMap(
-				FVector2D(GetCaptureCenter()) - WidgetToWorld(Local),
+		AddTempPin(FVector2D(GetCaptureCenter()) - WidgetToWorld(Local),
 				GetCurrentGlobalMapData(), ECC_Visibility);
-		}
-		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+		return FReply::Handled();
 	}
-	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+	return FReply::Unhandled();
 }
 
 FReply UMainMapUserWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
@@ -236,9 +228,10 @@ FReply UMainMapUserWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, co
 	if (InMouseEvent.GetEffectingButton() == DragKey)
 	{
 		bMouseDragging = false;
+		return FReply::Handled().ReleaseMouseCapture();
 	}
 	
-	return Super::NativeOnMouseButtonUp(InGeometry, InMouseEvent);
+	return FReply::Unhandled();
 }
 
 void UMainMapUserWidget::ManageEvents(bool bManage)
@@ -255,18 +248,65 @@ void UMainMapUserWidget::ManageEvents(bool bManage)
 		}
 	}
 	
-	if (const auto Subsystem = GetMinimapSubsystem())
+	if (const auto Interface = TryGetDataInterface())
 	{
 		if (bManage)
 		{
-			Subsystem->OnMapPinAddEvent.AddDynamic(this, &ThisClass::OnMapPinAddEvent);
-			Subsystem->OnMapPinRemoveEvent.AddDynamic(this, &ThisClass::OnMapPinRemoveEvent);
-			Subsystem->OnHotPointFoundEvent.AddDynamic(this, &ThisClass::OnHotPointFound);
-			Subsystem->OnHotPointRemoveEvent.AddDynamic(this, &ThisClass::OnHotPointRemove);
+			if (Interface->GetMapPinAddEvent())
+			{
+				Interface->GetMapPinAddEvent()->AddUObject(this, &ThisClass::OnMapPinAddEvent);
+			}
+			if (Interface->GetMapPinRemoveEvent())
+			{
+				Interface->GetMapPinRemoveEvent()->AddUObject(this, &ThisClass::OnMapPinRemoveEvent);
+			}
 		}
 		else
 		{
-			Subsystem->OnHotPointFoundEvent.RemoveAll(this);
+			if (Interface->GetMapPinAddEvent())
+			{
+				Interface->GetMapPinAddEvent()->RemoveAll(this);
+			}
+			if (Interface->GetMapPinRemoveEvent())
+			{
+				Interface->GetMapPinRemoveEvent()->RemoveAll(this);
+			}
+		}
+	}
+}
+
+void UMainMapUserWidget::AddTempPin(const FVector2D Location, const UMinimapMapData* MapData,
+	const ECollisionChannel TraceChannel) const
+{
+	//Set map highest point, used to be the z location of the map capture actor.
+	float MapHighestPoint = 100000.f;
+	if (MapData)
+	{
+		MapHighestPoint = MapData->CaptureActorLocation.Z;
+	}
+
+	//Get setting
+	float HitResultTraceDistance = 100000.f;
+	if (const UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>())
+	{
+		HitResultTraceDistance = Settings->ControllerHitResultDistance;
+	}
+	
+	// Line trace by channel, channel is visibility
+	FHitResult HitResult;
+	const FVector Start = FVector(Location.X, Location.Y, MapHighestPoint);
+	const FVector End = FVector(Location.X, Location.Y, MapHighestPoint - HitResultTraceDistance);
+	if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, TraceChannel))
+	{
+		if (const auto World = GetWorld())
+		{
+			if (const auto GS = World->GetGameState())
+			{
+				if (const auto Global = GS->GetComponentByClass<UMinimapGlobal>())
+				{
+					Global->AddTempPin(GetOwningPlayer(), HitResult.Location, TempPinBrush);
+				}
+			}
 		}
 	}
 }

@@ -3,21 +3,24 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MinimapFastArray.h"
+#include "MinimapStructs.h"
 #include "MinimapSubsystem.generated.h"
 
+class AMapPinActor;
 class UMinimapGlobal;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapUserSettingsChangedEvent, UMinimapUserSettings*, MinimapUserSettings);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHotPointChangeEvent, const FString&, LevelName, const FGuid&, Guid);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMapPinStateChangeEvent, const FGuid&, MapPinId);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapGlobalReadyEvent, UMinimapGlobal*, MinimapGlobal);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FLocalMapDataChangeEvent, const UMinimapMapData*, MinimapMapData);
 
 UCLASS(DisplayName = "Minimap Subsystem")
 class MINIMAP_API UMinimapSubsystem : public UWorldSubsystem
 {
 	GENERATED_BODY()
 	
-	friend class UMinimapComponent;
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize() override;
 
 public:
 #pragma region Delegate
@@ -31,44 +34,36 @@ public:
 	FHotPointChangeEvent OnHotPointRemoveEvent;
 	
 	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
-	FOnMapPinStateChangeEvent OnMapPinAddEvent;
+	FMinimapGlobalReadyEvent OnMinimapGlobalReadyEvent;
 	
 	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
-	FOnMapPinStateChangeEvent OnMapPinRemoveEvent;
+	FLocalMapDataChangeEvent OnLocalMapDataChangeEvent;
+	
 #pragma endregion 
 	
 	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem")
 	UMinimapMapData* CurrentMinimapMapData;
 
+	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem")
+	UMinimapMapData* LocalMinimapMapData;
+	
+	UPROPERTY(BlueprintReadOnly, Category = "MinimapSubsystem")
+	AMapPinActor* LocalTempPinActor;
+	
 public:
-	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
-	FMapPinStateList GetLocalPinStateList() const;
+	void SetLocalMinimapMapData(UMinimapMapData* LocalMinimapMapData);
 	
-	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
-	FMapPinStateList GetGlobalPinStateList() const;
-
-	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
-	FGuid AddStaticMapPin(const FMapPinStateEntry& InEntry);
-	
-	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
-	void RemoveStaticMapPin(FGuid MapPinGuid);
-
+	/** Get current minimap data for this level. */
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
 	UMinimapMapData* GetCurrentMinimapMapData();
 
+	/** Get current map's hot point info by guid. */
 	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
 	bool GetHotPointInfoFromGuid(FGuid Guid, FPoiInfo& OutInfo);
 	
+	/** Try get minimap global component. */
 	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
 	UMinimapGlobal* GetMinimapGlobal() const;
 	
-	UFUNCTION(BlueprintPure, Category = "MinimapSubsystem")
-	bool GetMapPinCurrentState(FGuid Id, FMapPinStateEntry& OutEntry);
-	
-	UFUNCTION(BlueprintCallable, Category = "MinimapSubsystem")
-	void SetMapPinCurrentState(const FMapPinStateEntry& InEntry);
-	
-protected:
-	/** Local pin state list */
-	FMapPinStateList LocalPinStateList;
+	bool HasAuthority() const;
 };

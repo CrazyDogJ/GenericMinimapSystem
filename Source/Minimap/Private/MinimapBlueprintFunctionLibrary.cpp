@@ -3,6 +3,7 @@
 
 #include "MinimapBlueprintFunctionLibrary.h"
 
+#include "MinimapMapData.h"
 #include "MinimapUserSettings.h"
 #include "Blueprint/WidgetTree.h"
 #include "GameFramework/PlayerController.h"

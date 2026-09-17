@@ -611,20 +611,19 @@ void UMinimapComponent_Player::UpdateMinimapShownPins()
 	const auto Subsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>();
 	
 	TArray<FGuid> MapPinsGuidArray;
-	const auto LocalList = Subsystem->GetLocalPinStateList();
-	const auto GlobalList = Subsystem->GetGlobalPinStateList();
-	TArray<FMapPinStateEntry> TotalEntries;
-	TotalEntries.Append(LocalList.StateEntries);
-	TotalEntries.Append(GlobalList.StateEntries);
-	for (auto Entry : TotalEntries)
+	const auto ListArray = Subsystem->GetTotalPinStateList();
+	for (const auto List : ListArray)
 	{
-		if (!Entry.bAlwaysOnMinimap)
+		for (const auto Entry : List.StateEntries)
 		{
-			MapPinsGuidArray.AddUnique(Entry.Id);
-		}
-		else
-		{
-			AddMinimapPin(Entry.Id);
+			if (!Entry.bAlwaysOnMinimap)
+			{
+				MapPinsGuidArray.AddUnique(Entry.Id);
+			}
+			else
+			{
+				AddMinimapPin(Entry.Id);
+			}
 		}
 	}
 

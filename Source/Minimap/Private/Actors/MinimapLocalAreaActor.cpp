@@ -1,7 +1,7 @@
 ﻿
 #include "Actors/MinimapLocalAreaActor.h"
 
-#include "Components/MinimapComponent_Player.h"
+#include "MinimapSubsystem.h"
 #include "Components/BrushComponent.h"
 #include "Components/CapsuleComponent.h"
 
@@ -17,11 +17,14 @@ AMinimapLocalAreaActor::AMinimapLocalAreaActor()
 void AMinimapLocalAreaActor::OnBrushOverlapped(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
 	bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (Cast<UCapsuleComponent>(OtherComp))
+	const auto ShapeComponent = Cast<UShapeComponent>(OtherComp);
+	const auto IsRoot = ShapeComponent->GetOwner()->GetRootComponent() == ShapeComponent;
+	const auto IsPawn = Cast<APawn>(ShapeComponent->GetOwner());
+	if (IsPawn && IsRoot && IsPawn->IsLocallyControlled())
 	{
-		if (auto MinimapPlayerComp = Cast<UMinimapComponent_Player>(OtherComp->GetOwner()->GetComponentByClass(UMinimapComponent_Player::StaticClass())))
+		if (const auto Sub = GetWorld()->GetSubsystem<UMinimapSubsystem>())
 		{
-			MinimapPlayerComp->SetCurrentLocalMinimapData(LocalMinimapData);
+			Sub->SetLocalMinimapMapData(LocalMinimapData);
 		}
 	}
 }
@@ -29,13 +32,16 @@ void AMinimapLocalAreaActor::OnBrushOverlapped(UPrimitiveComponent* OverlappedCo
 void AMinimapLocalAreaActor::OnBrushEndOverlap(class UPrimitiveComponent* OverlappedComp, class AActor* OtherActor,
 	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	if (Cast<UCapsuleComponent>(OtherComp))
+	const auto ShapeComponent = Cast<UShapeComponent>(OtherComp);
+	const auto IsRoot = ShapeComponent->GetOwner()->GetRootComponent() == ShapeComponent;
+	const auto IsPawn = Cast<APawn>(ShapeComponent->GetOwner());
+	if (IsPawn && IsRoot && IsPawn->IsLocallyControlled())
 	{
-		if (auto MinimapPlayerComp = Cast<UMinimapComponent_Player>(OtherComp->GetOwner()->GetComponentByClass(UMinimapComponent_Player::StaticClass())))
+		if (const auto Sub = GetWorld()->GetSubsystem<UMinimapSubsystem>())
 		{
-			if (MinimapPlayerComp->GetCurrentLocalMinimapData() == LocalMinimapData)
+			if (Sub->LocalMinimapMapData == LocalMinimapData)
 			{
-				MinimapPlayerComp->SetCurrentLocalMinimapData(nullptr);
+				Sub->SetLocalMinimapMapData(nullptr);
 			}
 		}
 	}

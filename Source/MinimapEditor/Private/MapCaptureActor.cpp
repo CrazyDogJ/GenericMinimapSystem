@@ -58,6 +58,43 @@ void AMapCaptureActor::CaptureMap()
 	}
 
 	StartCapture();
+	
+	UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>();
+	if (auto Value = Settings->MapsInfos.Find(MapName))
+	{
+		if (UMinimapMapData* MapData = Value->LoadSynchronous())
+		{
+			WriteMapInfo(MapData);
+			// ReSharper disable once CppExpressionWithoutSideEffects
+			MapData->MarkPackageDirty();
+		}
+	}
+	else
+	{
+		Settings->LoadConfig(UMinimapSettings::StaticClass(), *Settings->GetDefaultConfigFilename());
+		FString AssetPath = Settings->MapTexturePath + "DA_" + MapName;
+		FString AssetName = "DA_" + MapName;
+		UPackage* Package = CreatePackage(*AssetPath);
+		if (UMinimapMapData* NewMapInfo = NewObject<UMinimapMapData>(Package, *AssetName, RF_Public | RF_Standalone))
+		{
+			WriteMapInfo(NewMapInfo);
+		}
+		// save mapper class
+		FString const PackageName = Package->GetName();
+		FString const PackageFileName = FPackageName::LongPackageNameToFilename(PackageName, FPackageName::GetAssetPackageExtension());
+
+		FSavePackageArgs SaveArgs;
+		SaveArgs.TopLevelFlags = RF_Standalone;
+		SaveArgs.SaveFlags = SAVE_NoError;
+		UPackage::SavePackage(Package, nullptr, *PackageFileName, SaveArgs);
+		
+		auto SoftRef = TSoftObjectPtr<UMinimapMapData>(FSoftObjectPath(AssetPath + "." + AssetName));
+		if (!bLocalMap)
+		{
+			Settings->MapsInfos.Add(UGameplayStatics::GetCurrentLevelName(GetWorld()), SoftRef);
+			Settings->SaveConfig(CPF_Config, *Settings->GetDefaultConfigFilename());
+		}
+	}
 }
 
 void AMapCaptureActor::CaptureHotPoints() const
@@ -156,11 +193,10 @@ void AMapCaptureActor::CaptureMapSequence()
 	}
 }
 
-void AMapCaptureActor::WriteMapInfo(UMinimapMapData* DataAsset, UTexture2D* Tex)
+void AMapCaptureActor::WriteMapInfo(UMinimapMapData* DataAsset)
 {
 	DataAsset->LevelName = MapName;
 	DataAsset->MapSize = EndPoint.X;
-	DataAsset->MapTexture = Tex;
 	DataAsset->TextureSize = TextureScale;
 	DataAsset->CaptureActorLocation = GetActorLocation();
 }
@@ -180,7 +216,7 @@ void AMapCaptureActor::WriteHotPoints(UMinimapMapData* DataAsset) const
 	{
 		if (const auto Point = Cast<AMapHotPointActor>(Actor))
 		{
-			DataAsset->HotPointInfos.Add(Point->PoiInfo.Id, Point->PoiInfo);
+			DataAsset->HotPointInfos.Add(Point->PoiInfo.HotPointId, Point->PoiInfo);
 			Point->Modify();
 			Point->HotPointLevelName = MapName;
 			// ReSharper disable once CppExpressionWithoutSideEffects

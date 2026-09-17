@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/MinimapComponent.h"
 #include "GameFramework/Actor.h"
 #include "Components/SphereComponent.h"
 #include "MapPinActor.generated.h"
@@ -24,13 +23,15 @@ public:
 	UPROPERTY()
 	USceneComponent* SceneComponent;
 	
-	UPROPERTY(BlueprintReadOnly)
-	UMinimapComponent* MinimapComp;
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_OwningController)
+	AController* OwningController;
 
-	//UPROPERTY()
-	//UWidgetComponent* WidgetComponent;
-
-	UPROPERTY(EditAnywhere, Replicated, BlueprintReadWrite)
+	UFUNCTION()
+	void OnRep_OwningController();
+	
+	FGuid Id;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FSlateBrush PinSlateBrush;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -43,9 +44,18 @@ public:
 	void Overlapped(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,int32 OtherBodyIndex,bool bFromSweep,const FHitResult& SweepResult);
 	
 protected:
+	UFUNCTION()
+	void OnControllerDestroyed(AActor* DestroyedActor);
+	
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	virtual bool IsNetRelevantFor(const AActor* RealViewer, const AActor* ViewTarget, const FVector& SrcLocation) const override;
+	
+	void AddMapPin();
+	void InitializeOwningController();
+	void InitializeCollision();
+	
 	// Called when the game starts or when spawned
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 

@@ -98,8 +98,6 @@ struct FMinimapZoneGraphAStarNode : public FGraphAStarDefaultNode<FMinimapZoneGr
 /** Context for FGraphAStar::FindPath() */
 struct FMinimapZoneGraphPathFilter
 {
-	// @todo: rename FZoneGraphPathfindContext?
-
 	typedef FMinimapZoneGraphLaneNodeRef FNodeRef;
 
 	FMinimapZoneGraphPathFilter(const FZoneGraphStorage& InGraph, const FZoneGraphLaneLocation& InStartLocation, const FZoneGraphLaneLocation& InEndLocation, const FZoneGraphTagFilter InZoneTagFilter = FZoneGraphTagFilter())

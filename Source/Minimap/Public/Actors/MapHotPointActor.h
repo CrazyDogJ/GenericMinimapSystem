@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/MinimapComponent_Player.h"
+#include "MinimapStructs.h"
 #include "GameFramework/Actor.h"
 #include "MapHotPointActor.generated.h"
 
@@ -22,7 +22,7 @@ public:
 	FPoiInfo PoiInfo;
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
-	void FoundThisMapHotPoint(UMinimapComponent_Player* Player, bool Global);
+	void FoundThisMapHotPoint(APawn* Pawn, bool Global);
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	USceneComponent* Root;

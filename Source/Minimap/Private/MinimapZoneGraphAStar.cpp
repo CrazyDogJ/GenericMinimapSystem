@@ -312,8 +312,7 @@ bool UMinimapZoneGraphAStarLibrary::GetZoneGraphPathBP(const UObject* WorldConte
     	FMinimapZoneGraphPathFilter PathFilter(ZoneGraphStorage, StartNearestLaneLocation, EndNearestLaneLocation, FZoneGraphTagFilter());
         FMinimapZoneGraphAStarWrapper Graph(ZoneGraphStorage, StartNearestLaneLocation, EndNearestLaneLocation);
         FMinimapZoneGraphAStar Pathfinder(Graph);
-				
-        // @todo: see if we can return directly a path of lane handles
+
         TArray<FMinimapZoneGraphAStarWrapper::FNodeRef> ResultPath;
 
         if (EGraphAStarResult Result = Pathfinder.FindPath(StartNode, EndNode, PathFilter, ResultPath); Result == SearchSuccess)

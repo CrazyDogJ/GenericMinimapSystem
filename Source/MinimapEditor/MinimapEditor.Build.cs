@@ -20,7 +20,6 @@ public class MinimapEditor : ModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore", 
-                "EditorScriptingUtilities", 
                 "Minimap",
                 "DetailCustomizations",
                 "InputCore",

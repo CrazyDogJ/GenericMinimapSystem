@@ -17,6 +17,7 @@ public class Minimap : ModuleRules
 				"InputCore", 
 				"EnhancedInput",
 				"NetCore",
+				"NetRelevantObject"
 			}
 			);
 		
@@ -29,7 +30,8 @@ public class Minimap : ModuleRules
 				"SlateCore",
 				"AIModule",
 				"GameplayTags",
-				"NavigationSystem"
+				"NavigationSystem",
+				"NetRelevantObject"
 			}
 			);
 	}

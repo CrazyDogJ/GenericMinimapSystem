@@ -4,9 +4,11 @@
 #include "Widgets/MinimapBaseUserWidget.h"
 
 #include "MinimapSubsystem.h"
-#include "Components/MinimapComponent_Player.h"
+#include "Components/MinimapGlobal.h"
 #include "Components/Overlay.h"
+#include "GameFramework/GameStateBase.h"
 #include "Widgets/MapPinUserWidget.h"
+#include "Widgets/MinimapWidgetInterface.h"
 
 void UMinimapBaseUserWidget::ReleaseSlateResources(bool bReleaseChildren)
 {
@@ -15,22 +17,15 @@ void UMinimapBaseUserWidget::ReleaseSlateResources(bool bReleaseChildren)
 	Super::ReleaseSlateResources(bReleaseChildren);
 }
 
-UMinimapBaseUserWidget::UMinimapBaseUserWidget(const FObjectInitializer& Initializer)
-	: Super(Initializer), WidgetPool(*this), LocalPawn(nullptr)
+UMinimapBaseUserWidget::UMinimapBaseUserWidget(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer), WidgetPool(*this), LocalPawn(nullptr)
 {
 }
 
 void UMinimapBaseUserWidget::AddMapPin(FGuid Guid)
 {
-	// Need local component.
-	const auto LocalPlayerComp = GetLocalPlayerMinimapComponent();
-	if (!LocalPlayerComp)
-	{
-		return;
-	}
-
-	// Not add hot point if not found.
-	if (!LocalPlayerComp->HotPointCheck(Guid))
+	// We do not add a map pin once more if we found it in mapping.
+	if (Markers.Contains(Guid))
 	{
 		return;
 	}
@@ -39,9 +34,10 @@ void UMinimapBaseUserWidget::AddMapPin(FGuid Guid)
 	const auto Function =
 		[this, Guid, &bConstructCalled](UUserWidget* WidgetObject, const TSharedRef<SWidget>& Content)
 		{
-			if (UMapPinUserWidget* NewMapPin = Cast<UMapPinUserWidget>(WidgetObject))
+			if (UMapPinUserWidget* NewPin = Cast<UMapPinUserWidget>(WidgetObject))
 			{
-				NewMapPin->Guid = Guid;
+				NewPin->MinimapDataSourceObject = MinimapDataSourceObject;
+				NewPin->Guid = Guid;
 				bConstructCalled = true;
 			}
 			
@@ -54,6 +50,7 @@ void UMinimapBaseUserWidget::AddMapPin(FGuid Guid)
 		const auto NewPin = WidgetPool.GetOrCreateInstance<UMapPinUserWidget>(Class, Function);
 		if (!bConstructCalled)
 		{
+			NewPin->MinimapDataSourceObject = MinimapDataSourceObject;
 			NewPin->Guid = Guid;
 		}
 		GetMarkersOverlay()->AddChildToOverlay(NewPin);
@@ -72,6 +69,60 @@ void UMinimapBaseUserWidget::RemoveMapPin(FGuid Guid)
 	}
 }
 
+TSubclassOf<UMapPinUserWidget> UMinimapBaseUserWidget::GetCustomClass(const FGuid& Guid)
+{
+	if (const auto Interface = TryGetDataInterface())
+	{
+		TSubclassOf<UMapPinUserWidget> Result;
+		if (Interface->GetMapPinClass(Guid, MarkerClassType, Result))
+		{
+			if (Result)
+			{
+				return Result;
+			}
+		}
+	}
+	
+	return MarkerWidgetClass;
+}
+
+IMinimapWidgetInterface* UMinimapBaseUserWidget::TryGetDataInterface() const
+{
+	if (MinimapDataSourceObject.IsValid())
+	{
+		return Cast<IMinimapWidgetInterface>(MinimapDataSourceObject.Get());
+	}
+	
+	if (const auto GS = GetWorld()->GetGameState())
+	{
+		if (const auto Global = GS->GetComponentByClass<UMinimapGlobal>())
+		{
+			return Cast<IMinimapWidgetInterface>(Global);
+		}
+	}
+	
+	return nullptr;
+}
+
+bool UMinimapBaseUserWidget::ShouldHide(const FGuid& Id) const
+{
+	if (const auto Interface = TryGetDataInterface())
+	{
+		FGameplayTag Tag;
+		if (Interface->GetCategoryTag(Id, Tag))
+		{
+			return ShouldHide(Tag);
+		}
+	}
+	
+	return false;
+}
+
+bool UMinimapBaseUserWidget::ShouldHide(const FGameplayTag& InTag) const
+{
+	return HiddenCategoryTags.Contains(InTag);
+}
+
 UMinimapSubsystem* UMinimapBaseUserWidget::GetMinimapSubsystem() const
 {
 	return GetWorld()->GetSubsystem<UMinimapSubsystem>();
@@ -79,15 +130,12 @@ UMinimapSubsystem* UMinimapBaseUserWidget::GetMinimapSubsystem() const
 
 AActor* UMinimapBaseUserWidget::GetLocalPlayerActor() const
 {
-	return LocalPawn;
-}
-
-UMinimapComponent_Player* UMinimapBaseUserWidget::GetLocalPlayerMinimapComponent() const
-{
-	if (const auto LocalPlayerActor = GetLocalPlayerActor())
+	if (LocalPawn)
 	{
-		return LocalPlayerActor->GetComponentByClass<UMinimapComponent_Player>();
+		return LocalPawn;
 	}
-
-	return nullptr;
+	else
+	{
+		return GetOwningPlayerPawn();
+	}
 }

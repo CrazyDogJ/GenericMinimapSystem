@@ -1,9 +1,10 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "Minimap.h"
-#include "MinimapSettings.h"
 
 #define LOCTEXT_NAMESPACE "FMinimapModule"
+
+DEFINE_LOG_CATEGORY(LogMinimap);
 
 void FMinimapModule::StartupModule()
 {

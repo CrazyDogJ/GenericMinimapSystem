@@ -9,36 +9,23 @@
 #include "GameFramework/GameStateBase.h"
 #include "Kismet/GameplayStatics.h"
 
-FMapPinStateList UMinimapSubsystem::GetLocalPinStateList() const
+void UMinimapSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
-    return LocalPinStateList;
+    Super::Initialize(Collection);
 }
 
-FMapPinStateList UMinimapSubsystem::GetGlobalPinStateList() const
+void UMinimapSubsystem::Deinitialize()
 {
-    if (const auto GS = GetMinimapGlobal())
+    Super::Deinitialize();
+}
+
+void UMinimapSubsystem::SetLocalMinimapMapData(UMinimapMapData* InLocalMinimapMapData)
+{
+    if (LocalMinimapMapData != InLocalMinimapMapData)
     {
-        return GS->PinStateList;
+        LocalMinimapMapData = InLocalMinimapMapData;
+        OnLocalMapDataChangeEvent.Broadcast(LocalMinimapMapData);
     }
-    
-    return FMapPinStateList();
-}
-
-FGuid UMinimapSubsystem::AddStaticMapPin(const FMapPinStateEntry& InEntry)
-{
-    auto Copy = InEntry;
-    if (!Copy.Id.IsValid())
-    {
-        Copy.Id = FGuid::NewGuid();
-    }
-    
-    LocalPinStateList.AddMapPinState(Copy);
-    return Copy.Id;
-}
-
-void UMinimapSubsystem::RemoveStaticMapPin(FGuid MapPinGuid)
-{
-    LocalPinStateList.RemoveMapPinState(MapPinGuid);
 }
 
 UMinimapMapData* UMinimapSubsystem::GetCurrentMinimapMapData()
@@ -60,7 +47,11 @@ UMinimapMapData* UMinimapSubsystem::GetCurrentMinimapMapData()
             return nullptr;
         }
     	// Update virtual texture.
-    	CurrentMinimapMapData->MapTexture->UpdateResource();
+        if (CurrentMinimapMapData->MapTexture)
+        {
+            CurrentMinimapMapData->MapTexture->UpdateResource();
+        }
+    	
         return CurrentMinimapMapData;
     }
     
@@ -95,20 +86,12 @@ UMinimapGlobal* UMinimapSubsystem::GetMinimapGlobal() const
     return nullptr;
 }
 
-bool UMinimapSubsystem::GetMapPinCurrentState(const FGuid Id, FMapPinStateEntry& OutEntry)
+bool UMinimapSubsystem::HasAuthority() const
 {
-    if (const auto MG = GetMinimapGlobal())
+    if (GetWorld()->GetAuthGameMode())
     {
-        if (MG->PinStateList.GetCurrentState(Id, OutEntry))
-        {
-            return true;
-        }
+        return true;
     }
     
-    return LocalPinStateList.GetCurrentState(Id, OutEntry);
-}
-
-void UMinimapSubsystem::SetMapPinCurrentState(const FMapPinStateEntry& InEntry)
-{
-    LocalPinStateList.SetMapPinState(InEntry);
+    return false;
 }

@@ -3,10 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MinimapUserSettings.h"
 #include "MinimapSettings.generated.h"
 
 class UMinimapMapData;
-class UMinimapUserSettings;
 class UMainMapUserWidget;
 class UMinimapUserWidget;
 

@@ -1,11 +1,12 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "MinimapFastArray.h"
+#include "MinimapStructs.h"
 
 #include "MinimapMapData.h"
 #include "MinimapSettings.h"
-#include "Components/MinimapComponent.h"
+#include "MinimapSubsystem.h"
 
+#pragma region FPoiStateEntry
 FPoiStateEntry::FPoiStateEntry(const FString& InLevelName, const FGuid InPoiIndex)
 {
 	const auto DefaultMinimapSettings = GetDefault<UMinimapSettings>();
@@ -22,7 +23,8 @@ FPoiStateEntry::FPoiStateEntry(const UMinimapMapData* MapData, const FGuid InPoi
 		FPoiStateEntry(MapData->LevelName, InPoiIndex);
 	}
 }
-
+#pragma endregion FPoiStateEntry
+#pragma region FPoiStateList
 FPoiStateList::FPoiStateList(const TMap<FString, FMinimapIndices>& InitMapping)
 {
 	for (const auto Itr : InitMapping)
@@ -50,6 +52,26 @@ TMap<FString, FMinimapIndices> FPoiStateList::AppendOther(const FPoiStateList& O
 	}
 	
 	return Copy;
+}
+
+UWorld* FPoiStateList::GetWorld() const
+{
+	if (WorldContextObject)
+	{
+		return WorldContextObject->GetWorld();
+	}
+
+	return nullptr;
+}
+
+UMinimapSubsystem* FPoiStateList::GetSubsystem() const
+{
+	if (const auto World = GetWorld())
+	{
+		return  World->GetSubsystem<UMinimapSubsystem>();
+	}
+
+	return nullptr;
 }
 
 FString FPoiStateList::GetLevelName(int32 LevelIndex)
@@ -196,165 +218,11 @@ void FPoiStateList::PostReplicatedAdd(const TArrayView<int32>& AddedIndices, int
 		}
 	}
 }
-
+#pragma endregion FPoiStateList
+#pragma region UMinimapFastArrayLibrary
 TMap<FString, FMinimapIndices> UMinimapFastArrayLibrary::GetPoiMapping(const FPoiStateList& List)
 {
 	return List.PoiStateMap;
-}
-
-FMapPinStateEntry FMapPinStateEntry::GetCurrentState() const
-{
-	FMapPinStateEntry Copy = *this;
-	Copy.UpdateTransform();
-
-	return Copy;
-}
-
-void FMapPinStateEntry::UpdateTransform()
-{
-	if (ActorWeakPtr.IsValid())
-	{
-		Location = ActorWeakPtr->GetActorLocation();
-		if (bHasYaw)
-		{
-			Yaw = ActorWeakPtr->GetActorRotation().Yaw;
-		}
-	}
-}
-
-int FMapPinStateList::AddMapPinState(const FMapPinStateEntry& InNewEntry)
-{
-	if (InNewEntry.Id.IsValid() && !QueryMapping.Contains(InNewEntry.Id))
-	{
-		FMapPinStateEntry NewEntry = InNewEntry;
-		NewEntry.UpdateTransform();
-		const auto Index = StateEntries.Add(NewEntry);
-		QueryMapping.Add(NewEntry.Id, Index);
-		BroadcastMapPinChange(NewEntry.Id, true);
-		MarkItemDirty(NewEntry);
-		return Index;
-	}
-	
-	return *QueryMapping.Find(InNewEntry.Id);
-}
-
-bool FMapPinStateList::RemoveMapPinState(const FGuid Id)
-{
-	FMapPinStateEntry FindingEntry;
-	FindingEntry.Id = Id;
-	const auto RemovedANum = StateEntries.Remove(FindingEntry);
-	BroadcastMapPinChange(Id, false);
-	const auto RemovedMNum = QueryMapping.Remove(Id);
-	MarkArrayDirty();
-	return RemovedANum > 0 && RemovedMNum > 0;
-}
-
-bool FMapPinStateList::SetMapPinState(const FMapPinStateEntry& InNewEntry)
-{
-	if (const auto Found = QueryMapping.Find(InNewEntry.Id))
-	{
-		if (StateEntries.IsValidIndex(*Found))
-		{
-			StateEntries[*Found] = InNewEntry;
-			return true;
-		}
-	}
-	
-	return false;
-}
-
-void FMapPinStateList::BroadcastMapPinChange(const FGuid Id, const bool AddOrRemove) const
-{
-	auto Sub = Cast<UMinimapSubsystem>(OwnerObject);
-	if (!Sub)
-	{
-		if (OwnerObject && OwnerObject->GetWorld())
-		{
-			Sub = OwnerObject->GetWorld()->GetSubsystem<UMinimapSubsystem>();
-		}
-	}
-	
-	if (Sub)
-	{
-		if (AddOrRemove)
-		{
-			Sub->OnMapPinAddEvent.Broadcast(Id);
-		}
-		else
-		{
-			Sub->OnMapPinRemoveEvent.Broadcast(Id);
-		}
-	}
-}
-
-bool FMapPinStateList::GetCurrentState(int Index, FMapPinStateEntry& OutEntry) const
-{
-	if (StateEntries.IsValidIndex(Index))
-	{
-		OutEntry = StateEntries[Index].GetCurrentState();
-		return true;
-	}
-	
-	return false;
-}
-
-bool FMapPinStateList::GetCurrentState(FGuid Id, FMapPinStateEntry& OutEntry) const
-{
-	if (const auto FoundIndex = QueryMapping.Find(Id))
-	{
-		return GetCurrentState(*FoundIndex, OutEntry);
-	}
-	
-	return false;
-}
-
-void FMapPinStateList::UpdateTransform(int Index)
-{
-	if (StateEntries.IsValidIndex(Index))
-	{
-		StateEntries[Index].UpdateTransform();
-		MarkItemDirty(StateEntries[Index]);
-	}
-}
-
-void FMapPinStateList::UpdateTransform(FGuid Id)
-{
-	if (const auto FoundIndex = QueryMapping.Find(Id))
-	{
-		UpdateTransform(*FoundIndex);
-	}
-}
-
-void FMapPinStateList::UpdateAllTransforms()
-{
-	for (auto& Entry : StateEntries)
-	{
-		Entry.UpdateTransform();
-		MarkItemDirty(Entry);
-	}
-}
-
-void FMapPinStateList::PreReplicatedRemove(const TArrayView<int32>& RemovedIndices, int32 FinalSize)
-{
-	for (const auto Index : RemovedIndices)
-	{
-		BroadcastMapPinChange(StateEntries[Index].Id, false);
-		QueryMapping.Remove(StateEntries[Index].Id);
-	}
-}
-
-void FMapPinStateList::PostReplicatedAdd(const TArrayView<int32>& AddedIndices, int32 FinalSize)
-{
-	for (const auto Index : AddedIndices)
-	{
-		QueryMapping.Add(StateEntries[Index].Id, Index);
-		BroadcastMapPinChange(StateEntries[Index].Id, true);
-	}
-}
-
-void FMapPinStateList::PostReplicatedChange(const TArrayView<int32>& ChangedIndices, int32 FinalSize)
-{
-	// Not trigger anything, id should be persistent and can not be modified!!!
 }
 
 void UMinimapFastArrayLibrary::LoadPoi(FPoiStateList& List, const TMap<FString, FMinimapIndices>& InitMapping)
@@ -371,18 +239,4 @@ bool UMinimapFastArrayLibrary::IsPoiFound(const FPoiStateList& List, const FStri
 {
 	return List.IsPoiFound(LevelName, PoiIndex);
 }
-
-bool UMinimapFastArrayLibrary::GetMapPinCurrentState(FMapPinStateList& List, FGuid Id, FMapPinStateEntry& OutEntry)
-{
-	return List.GetCurrentState(Id, OutEntry);
-}
-
-int UMinimapFastArrayLibrary::AddMapPin(FMapPinStateList& List, const FMapPinStateEntry& InEntry)
-{
-	return List.AddMapPinState(InEntry);
-}
-
-bool UMinimapFastArrayLibrary::RemoveMapPin(FMapPinStateList& List, const FGuid Id)
-{
-	return List.RemoveMapPinState(Id);
-}
+#pragma endregion UMinimapFastArrayLibrary

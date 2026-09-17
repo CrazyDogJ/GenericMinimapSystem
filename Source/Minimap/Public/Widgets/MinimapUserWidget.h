@@ -12,33 +12,39 @@ class UOverlay;
 class UMapPinUserWidget;
 class UMinimapSubsystem;
 class UMinimapMapData;
-class UMinimapComponent_Player;
 
 UCLASS()
 class MINIMAP_API UMinimapUserWidget : public UMinimapBaseUserWidget
 {
 	GENERATED_BODY()
 	
+public:
+	UMinimapUserWidget(const FObjectInitializer& ObjectInitializer);
+	
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	virtual void NativeDestruct() override;
-
-	virtual TSubclassOf<UMapPinUserWidget> GetCustomClass(const FGuid& Guid) override;
-
-	UFUNCTION()
-	void OnLocalMapDataChanged(const UMinimapMapData* ChangedMinimapData);
-
-	UFUNCTION()
-	void OnMarkerShowOnMinimap(FGuid Guid);
-
-	UFUNCTION()
-	void OnMarkerHideOnMinimap(FGuid Guid);
+	
+	static bool IsInRadius(const FVector& CenterLocation, const FVector& CheckLocation, const float& Radius);
+	bool IsInRadius(const FVector& CenterLocation, const FVector& CheckLocation) const;
+	bool IsInRadius(const FVector& CenterLocation, const FGuid& InMapPinId) const;
+	bool IsInRadius(const FGuid& InMapPinId) const;
+	
+	void InitializeRadius();
+	void InitializeMapTexture() const;
+	void InitializeMapPins();
+	void ManagerEvents(const bool& BindOrUnbind);
+	
+	void OnMapPinAdd(const FGuid& Guid);
+	void OnMapPinRemove(const FGuid& Guid);
 
 	void UpdateInterpRadius(const float DeltaTime);
 	void UpdateViewAngle();
 	void UpdateLocalPlayerAngle();
 	void UpdateNorthWidgets();
+	void UpdateHotPoints();
+	void UpdateMarker(const IMinimapWidgetInterface* Interface, const FGuid& Id, UMapPinUserWidget* Widget);
 	void UpdateMarker(UMapPinUserWidget* MapPin, FGameplayTag CategoryTag, FVector2D WorldPosition2D, float Angle, bool bRotate = true);
 	void UpdateMarkers();
 	void UpdateMinimapImageParameters();
@@ -50,6 +56,12 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Minimap|State")
 	float ZoomMultiplier = 1.0f;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Minimap|State")
+	float TargetRadius = 5000.0f;
+	
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Minimap|State")
+	TSet<FGuid> CachedHotPoints;
 	
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Minimap|Settings")
 	float DefaultRadius = 5000.0f;

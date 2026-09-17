@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
-#include "MinimapFastArray.h"
+#include "MinimapStructs.h"
 #include "Engine/DataAsset.h"
 #include "MinimapMapData.generated.h"
 
