@@ -57,7 +57,7 @@ public:
 	FString LevelName;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Minimap")
-	UTexture2D* MapTexture;
+	TSoftObjectPtr<UTexture2D> MapTexture;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Minimap")
 	TArray<FMapLod> MapLods;

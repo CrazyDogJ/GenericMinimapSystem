@@ -59,22 +59,6 @@ void UMainMapUserWidget::InitializeSlider() const
 	}
 }
 
-void UMainMapUserWidget::InitializeMapTexture()
-{
-	if (const auto MapImage = GetImageWidget())
-	{
-		if (const auto Image = Cast<UImage>(MapImage))
-		{
-			MaterialInstance = Image->GetDynamicMaterial();
-			// TODO : LocalMapDataFeature : Do function that switch to local map later
-			if (const auto Data = GetCurrentGlobalMapData())
-			{
-				MaterialInstance->SetTextureParameterValue("Map", Data->MapTexture);
-			}
-		}
-	}
-}
-
 void UMainMapUserWidget::InitializeMapPins()
 {
 	if (const auto Interface = TryGetDataInterface())
@@ -136,7 +120,7 @@ void UMainMapUserWidget::UpdateTransform() const
 	}
 }
 
-void UMainMapUserWidget::UpdateMarkers()
+void UMainMapUserWidget::UpdateMarkers() const
 {
 	if (const auto Interface = TryGetDataInterface())
 	{
@@ -178,7 +162,6 @@ void UMainMapUserWidget::NativeConstruct()
 {
 	InitializeSlider();
 	UpdateText();
-	InitializeMapTexture();
 	InitializeMapPins();
 	ManageEvents(true);
 	SetFocus();
@@ -186,12 +169,21 @@ void UMainMapUserWidget::NativeConstruct()
 	Super::NativeConstruct();
 }
 
+int32 UMainMapUserWidget::NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,
+	const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId,
+	const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
+{
+	UpdateTransform();
+	UpdateMarkers();
+	
+	return Super::NativePaint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, LayerId, InWidgetStyle,
+	                          bParentEnabled);
+}
+
 void UMainMapUserWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	UpdateDragging();
-	UpdateTransform();
-	UpdateMarkers();
-
+	
 	Super::NativeTick(MyGeometry, InDeltaTime);
 }
 
@@ -311,7 +303,7 @@ void UMainMapUserWidget::AddTempPin(const FVector2D Location, const UMinimapMapD
 	}
 }
 
-bool UMainMapUserWidget::IsMapPinVisible_Implementation(FGuid Guid)
+bool UMainMapUserWidget::IsMapPinVisible_Implementation(FGuid Guid) const
 {
 	return true;
 }

@@ -23,6 +23,7 @@ public:
 	
 protected:
 	virtual void NativeConstruct() override;
+	virtual int32 NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	virtual void NativeDestruct() override;
 	
@@ -32,7 +33,6 @@ protected:
 	bool IsInRadius(const FGuid& InMapPinId) const;
 	
 	void InitializeRadius();
-	void InitializeMapTexture() const;
 	void InitializeMapPins();
 	void ManagerEvents(const bool& BindOrUnbind);
 	
@@ -40,14 +40,15 @@ protected:
 	void OnMapPinRemove(const FGuid& Guid);
 
 	void UpdateInterpRadius(const float DeltaTime);
-	void UpdateViewAngle();
-	void UpdateLocalPlayerAngle();
-	void UpdateNorthWidgets();
-	void UpdateHotPoints();
-	void UpdateMarker(const IMinimapWidgetInterface* Interface, const FGuid& Id, UMapPinUserWidget* Widget);
-	void UpdateMarker(UMapPinUserWidget* MapPin, FGameplayTag CategoryTag, FVector2D WorldPosition2D, float Angle, bool bRotate = true);
-	void UpdateMarkers();
-	void UpdateMinimapImageParameters();
+	void UpdateViewAngle() const;
+	void UpdateLocalPlayerAngle() const;
+	void UpdateNorthWidgets() const;
+	void UpdateMarker(const IMinimapWidgetInterface* Interface, const FGuid& Id, UMapPinUserWidget* Widget) const;
+	void UpdateMarker(UMapPinUserWidget* MapPin, FGameplayTag CategoryTag, FVector2D WorldPosition2D, float Angle, bool bRotate = true) const;
+	void UpdateMarkers() const;
+	void UpdateMinimapImageParameters() const;
+	
+	void UpdateMarkersVisibilities();
 	
 public:
 #pragma region Properties
@@ -100,21 +101,21 @@ public:
 
 	/** Return view angle. */
 	UFUNCTION(BlueprintNativeEvent, Category = "Minimap")
-	float GetViewAngle();
+	float GetViewAngle() const;
 
 	/** Return player pawn actor rotation. */
 	UFUNCTION(BlueprintNativeEvent, Category = "Minimap")
-	FTransform GetLocalPlayerTransform();
+	FTransform GetLocalPlayerTransform() const;
 	
 	UFUNCTION(BlueprintNativeEvent, Category = "Minimap")
-	float GetDesiredRadius();
+	float GetDesiredRadius() const;
 #pragma endregion
 #pragma region Functions
 	UFUNCTION(BlueprintPure, Category = "Minimap")
 	UMinimapMapData* GetCurrentMapData() const;
 
 	UFUNCTION(BlueprintPure, Category = "Minimap")
-	FVector2D GetWidgetPosition(const FVector2D InWorldPosition2D);
+	FVector2D GetWidgetPosition(const FVector2D InWorldPosition2D) const;
 
 	UFUNCTION(BlueprintPure, Category = "Minimap")
 	bool IsLocalPlayerMarker(const FGuid Guid) const;

@@ -38,17 +38,17 @@ protected:
 	void OnHotPointRemove(const FString& LevelName, const FGuid& Guid);
 
 	void InitializeSlider() const;
-	void InitializeMapTexture();
 	void InitializeMapPins();
 	
 	void UpdateText() const;
 	void UpdateDragging();
 	void UpdateTransform() const;
-	void UpdateMarkers();
+	void UpdateMarkers() const;
 	
 	void ReleaseAllMarkers();
 	
 	virtual void NativeConstruct() override;
+	virtual int32 NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	virtual void NativeDestruct() override;
 
@@ -105,7 +105,7 @@ public:
 	UWidget* GetImageWidget() const;
 
 	UFUNCTION(BlueprintNativeEvent, Category = "Minimap|Widgets")
-	bool IsMapPinVisible(FGuid Guid);
+	bool IsMapPinVisible(FGuid Guid) const;
 
 	UFUNCTION(BlueprintNativeEvent, Category = "Minimap|Widgets")
 	FText GetDisplayScaleText() const;

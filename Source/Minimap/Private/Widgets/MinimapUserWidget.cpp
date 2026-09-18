@@ -19,22 +19,30 @@ UMinimapUserWidget::UMinimapUserWidget(const FObjectInitializer& ObjectInitializ
 void UMinimapUserWidget::NativeConstruct()
 {
 	InitializeRadius();
-	InitializeMapTexture();
 	InitializeMapPins();
 	ManagerEvents(true);
 	
 	Super::NativeConstruct();
 }
 
-void UMinimapUserWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+int32 UMinimapUserWidget::NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,
+	const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId,
+	const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
 {
-	UpdateInterpRadius(InDeltaTime);
 	UpdateViewAngle();
 	UpdateLocalPlayerAngle();
 	UpdateNorthWidgets();
 	UpdateMarkers();
-	UpdateHotPoints();
 	UpdateMinimapImageParameters();
+	
+	return Super::NativePaint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, LayerId, InWidgetStyle,
+	                          bParentEnabled);
+}
+
+void UMinimapUserWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	UpdateInterpRadius(InDeltaTime);
+	UpdateMarkersVisibilities();
 	
 	Super::NativeTick(MyGeometry, InDeltaTime);
 }
@@ -87,22 +95,6 @@ void UMinimapUserWidget::InitializeRadius()
 {
 	InterpRadius = DefaultRadius;
 	TargetRadius = DefaultRadius;
-}
-
-void UMinimapUserWidget::InitializeMapTexture() const
-{
-	const auto MapData = GetCurrentMapData();
-	if (GetMinimapImageWidget() && MapData)
-	{
-		if (const auto ImageWidget = Cast<UImage>(GetMinimapImageWidget()))
-		{
-			const auto Texture = MapData->MapTexture;
-			Texture->UpdateResource();
-			Texture->SetForceMipLevelsToBeResident(10.0f);
-			const auto DynMat = ImageWidget->GetDynamicMaterial();
-			DynMat->SetTextureParameterValue("Map", MapData->MapTexture);
-		}
-	}
 }
 
 void UMinimapUserWidget::InitializeMapPins()
@@ -173,13 +165,12 @@ void UMinimapUserWidget::UpdateInterpRadius(const float DeltaTime)
 {
 	if (const auto CurrentMapData = GetCurrentMapData())
 	{
-		// TODO : LocalMapDataFeature : Local radius interp animation is not working now(we do not implement local map now.)
 		InterpRadius = FMath::FInterpTo(InterpRadius, TargetRadius, DeltaTime, InterpSpeed);
 		ZoomMultiplier = CurrentMapData->MapSize / InterpRadius;
 	}
 }
 
-void UMinimapUserWidget::UpdateViewAngle()
+void UMinimapUserWidget::UpdateViewAngle() const
 {
 	if (GetViewAreaWidget())
 	{
@@ -187,7 +178,7 @@ void UMinimapUserWidget::UpdateViewAngle()
 	}
 }
 
-void UMinimapUserWidget::UpdateLocalPlayerAngle()
+void UMinimapUserWidget::UpdateLocalPlayerAngle() const
 {
 	if (GetLocalPlayerWidget())
 	{
@@ -197,7 +188,7 @@ void UMinimapUserWidget::UpdateLocalPlayerAngle()
 	}
 }
 
-void UMinimapUserWidget::UpdateNorthWidgets()
+void UMinimapUserWidget::UpdateNorthWidgets() const
 {
 	if (GetNorthPivotWidget())
 	{
@@ -210,31 +201,8 @@ void UMinimapUserWidget::UpdateNorthWidgets()
 	}
 }
 
-void UMinimapUserWidget::UpdateHotPoints()
+void UMinimapUserWidget::UpdateMarker(const IMinimapWidgetInterface* Interface, const FGuid& Id, UMapPinUserWidget* Widget) const
 {
-	const auto Interface = TryGetDataInterface();
-	if (Interface && LocalPawn)
-	{
-		TSet<FGuid> OutGuid;
-		Interface->QueryHotPoints(LocalPawn->GetActorLocation(), InterpRadius, OutGuid);
-		for (const auto Id : OutGuid)
-		{
-			if (IsInRadius(Id))
-			{
-				AddMapPin(Id);
-			}
-		}
-	}
-}
-
-void UMinimapUserWidget::UpdateMarker(const IMinimapWidgetInterface* Interface, const FGuid& Id, UMapPinUserWidget* Widget)
-{
-	// If widget out of radius, we try to remove it.
-	if (!IsInRadius(Id) && !Interface->GetIsAlwaysOnMinimap(Id))
-	{
-		RemoveMapPin(Id);
-	}
-	
 	FGameplayTag CategoryTag;
 	const auto HasTag = Interface->GetCategoryTag(Id, CategoryTag);
 	FVector Location;
@@ -248,7 +216,7 @@ void UMinimapUserWidget::UpdateMarker(const IMinimapWidgetInterface* Interface, 
 }
 
 void UMinimapUserWidget::UpdateMarker(UMapPinUserWidget* MapPin, const FGameplayTag CategoryTag, const FVector2D WorldPosition2D,
-                                      const float Angle, const bool bRotate)
+                                      const float Angle, const bool bRotate) const
 {
 	if (MapPin)
 	{
@@ -267,7 +235,7 @@ void UMinimapUserWidget::UpdateMarker(UMapPinUserWidget* MapPin, const FGameplay
 	}
 }
 
-void UMinimapUserWidget::UpdateMarkers()
+void UMinimapUserWidget::UpdateMarkers() const
 {
 	if (GetMarkersOverlay())
 	{
@@ -276,19 +244,6 @@ void UMinimapUserWidget::UpdateMarkers()
 
 	if (const auto Interface = TryGetDataInterface())
 	{
-		// Check should add map pin.
-		TSet<FGuid> Pins;
-		if (Interface->GetRegisteredMapPins(Pins))
-		{
-			for (const auto Pin : Pins)
-			{
-				if (IsInRadius(Pin) && !IsLocalPlayerMarker(Pin))
-				{
-					AddMapPin(Pin);
-				}
-			}
-		}
-
 		const auto Copy = Markers;
 		for (const auto Itr : Copy)
 		{
@@ -297,7 +252,7 @@ void UMinimapUserWidget::UpdateMarkers()
 	}
 }
 
-void UMinimapUserWidget::UpdateMinimapImageParameters()
+void UMinimapUserWidget::UpdateMinimapImageParameters() const
 {
 	if (GetMinimapImageWidget())
 	{
@@ -317,6 +272,43 @@ void UMinimapUserWidget::UpdateMinimapImageParameters()
 	}
 }
 
+void UMinimapUserWidget::UpdateMarkersVisibilities()
+{
+	const auto Interface = TryGetDataInterface();
+	if (Interface)
+	{
+		if (LocalPawn)
+		{
+			TSet<FGuid> OutGuid;
+			Interface->QueryHotPoints(LocalPawn->GetActorLocation(), InterpRadius, OutGuid);
+			for (const auto Id : OutGuid)
+			{
+				if (IsInRadius(Id))
+				{
+					AddMapPin(Id);
+				}
+			}
+		}
+		
+		// Check should add map pin.
+		TSet<FGuid> Pins;
+		if (Interface->GetRegisteredMapPins(Pins))
+		{
+			for (const auto Pin : Pins)
+			{
+				if (IsInRadius(Pin) && !IsLocalPlayerMarker(Pin))
+				{
+					AddMapPin(Pin);
+				}
+				else if (!Interface->GetIsAlwaysOnMinimap(Pin))
+				{
+					RemoveMapPin(Pin);
+				}
+			}
+		}
+	}
+}
+
 float UMinimapUserWidget::GetMinimapDisplayRadius_Implementation()
 {
 	// Default radius
@@ -331,12 +323,12 @@ float UMinimapUserWidget::GetMinimapDisplayRadius_Implementation()
 	return DefaultRadius;
 }
 
-float UMinimapUserWidget::GetViewAngle_Implementation()
+float UMinimapUserWidget::GetViewAngle_Implementation() const
 {
 	return GetOwningPlayer()->GetControlRotation().Yaw;
 }
 
-FTransform UMinimapUserWidget::GetLocalPlayerTransform_Implementation()
+FTransform UMinimapUserWidget::GetLocalPlayerTransform_Implementation() const
 {
 	if (const auto LocalPlayerActor = GetLocalPlayerActor())
 	{
@@ -346,7 +338,7 @@ FTransform UMinimapUserWidget::GetLocalPlayerTransform_Implementation()
 	return FTransform::Identity;
 }
 
-float UMinimapUserWidget::GetDesiredRadius_Implementation()
+float UMinimapUserWidget::GetDesiredRadius_Implementation() const
 {
 	if (GetMinimapImageWidget())
 	{
@@ -358,25 +350,20 @@ float UMinimapUserWidget::GetDesiredRadius_Implementation()
 
 UMinimapMapData* UMinimapUserWidget::GetCurrentMapData() const
 {
-	// TODO : LocalMapDataFeature : Local map data feature.
-	// if (const auto MinimapComp = GetLocalPlayerMinimapComponent())
-	// {
-	// 	if (MinimapComp->GetCurrentLocalMinimapData())
-	// 	{
-	// 		return MinimapComp->GetCurrentLocalMinimapData();
-	// 	}
-	// }
-
-	// TODO : LocalMapDataFeature : Here is using minimap subsystem.
 	if (const auto MinimapSubsystem = GetMinimapSubsystem())
 	{
+		if (MinimapSubsystem->LocalMinimapMapData)
+		{
+			return MinimapSubsystem->LocalMinimapMapData;
+		}
+		
 		return MinimapSubsystem->GetCurrentMinimapMapData();
 	}
 
 	return nullptr;
 }
 
-FVector2D UMinimapUserWidget::GetWidgetPosition(const FVector2D InWorldPosition2D)
+FVector2D UMinimapUserWidget::GetWidgetPosition(const FVector2D InWorldPosition2D) const
 {
 	const auto LocalPlayer2D = FVector2D(GetLocalPlayerTransform().GetLocation());
 	const FVector2D TempPosition = (LocalPlayer2D - InWorldPosition2D) / InterpRadius * GetDesiredRadius();
