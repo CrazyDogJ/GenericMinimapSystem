@@ -38,11 +38,6 @@ void SZoomableCanvas::SetMaxScale(float InScaleMax)
 	ViewScale = FMath::Clamp(ViewScale, ScaleMin, ScaleMax);
 }
 
-void SZoomableCanvas::SetEnableInput(bool bNewEnableInput)
-{
-	bEnableInput = bNewEnableInput;
-}
-
 void SZoomableCanvas::SetViewScale(float InViewScale)
 {
 	ViewScale = InViewScale;
@@ -55,19 +50,24 @@ void SZoomableCanvas::SetViewOffset(FVector2D InViewOffset)
 
 void SZoomableCanvas::Construct(const FArguments& InArgs)
 {
-	// SetClipping(EWidgetClipping::ClipToBounds);
-	
-	/*
-	ChildSlot
-	[
-		// Populate the widget
-	];
-	*/
 }
 
-void SZoomableCanvas::AddTile(TSharedRef<SWidget> InWidget, FVector2D InPosition, FVector2D InSize)
+void SZoomableCanvas::AddTile(const TSharedRef<SWidget> InWidget, const FVector2D InPosition, const FVector2D InSize)
 {
 	TileSlots.Add(FTileSlot(InWidget, InPosition, InSize));
+	Children.Add(InWidget);
+}
+
+void SZoomableCanvas::RemoveTile(const TSharedRef<SWidget> InWidget)
+{
+	TileSlots.Remove(FTileSlot(InWidget));
+	Children.Remove(InWidget);
+}
+
+void SZoomableCanvas::ClearTiles()
+{
+	TileSlots.Empty();
+	Children.Empty();
 }
 
 void SZoomableCanvas::OnArrangeChildren(const FGeometry& AllottedGeometry, FArrangedChildren& ArrangedChildren) const
@@ -139,79 +139,6 @@ int32 SZoomableCanvas::OnPaint(const FPaintArgs& Args, const FGeometry& Allotted
 FChildren* SZoomableCanvas::GetChildren()
 {
 	return &Children;
-}
-
-FReply SZoomableCanvas::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
-{
-	if (!bEnableInput)
-	{
-		return SPanel::OnMouseButtonDown(MyGeometry, MouseEvent);
-	}
-	
-	// 使用右键或中键进行平移
-	if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
-	{
-		bIsDragging = true;
-		LastMousePos = MouseEvent.GetScreenSpacePosition();
-        
-		// 捕获鼠标，确保鼠标移出控件范围后依然能接收事件
-		return FReply::Handled().CaptureMouse(SharedThis(this));
-	}
-	
-	return FReply::Unhandled();
-}
-
-FReply SZoomableCanvas::OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
-{
-	if (!bEnableInput)
-	{
-		return SPanel::OnMouseButtonUp(MyGeometry, MouseEvent);
-	}
-	
-	if (bIsDragging)
-	{
-		bIsDragging = false;
-		return FReply::Handled().ReleaseMouseCapture();
-	}
-	
-	return FReply::Unhandled();
-}
-
-FReply SZoomableCanvas::OnMouseMove(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
-{
-	if (!bEnableInput)
-	{
-		return SPanel::OnMouseMove(MyGeometry, MouseEvent);
-	}
-	
-	if (bIsDragging)
-	{
-		FVector2D CursorDelta = MouseEvent.GetScreenSpacePosition() - LastMousePos;
-		ViewOffset += CursorDelta; // 移动视图偏移
-		LastMousePos = MouseEvent.GetScreenSpacePosition();
-		return FReply::Handled();
-	}
-	
-	return FReply::Unhandled();
-}
-
-FReply SZoomableCanvas::OnMouseWheel(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
-{
-	if (!bEnableInput)
-	{
-		return SPanel::OnMouseWheel(MyGeometry, MouseEvent);
-	}
-	
-	float OldScale = ViewScale;
-	ViewScale = FMath::Clamp(ViewScale + MouseEvent.GetWheelDelta() * ZoomStep, ScaleMin, ScaleMax);
- 
-	// 获取鼠标在控件内的局部位置
-	FVector2D MouseLocalPos = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
- 
-	// 缩放补偿公式：调整 Offset 以实现对准鼠标缩放
-	ViewOffset = MouseLocalPos - (MouseLocalPos - ViewOffset) * (ViewScale / OldScale);
- 
-	return FReply::Handled();
 }
 
 END_SLATE_FUNCTION_BUILD_OPTIMIZATION

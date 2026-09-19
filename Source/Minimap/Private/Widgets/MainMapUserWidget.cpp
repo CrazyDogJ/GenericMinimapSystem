@@ -314,10 +314,31 @@ FText UMainMapUserWidget::GetDisplayScaleText_Implementation() const
 	return FText::FromString(ScaleString);
 }
 
+bool UMainMapUserWidget::IsCurrentLocalMapDataValid() const
+{
+	if (GetMinimapSubsystem())
+	{
+		if (GetMinimapSubsystem()->LocalMinimapMapData)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 UMinimapMapData* UMainMapUserWidget::GetCurrentGlobalMapData() const
 {
 	if (GetMinimapSubsystem())
 	{
+		if (bShowLocal)
+		{
+			if (GetMinimapSubsystem()->LocalMinimapMapData)
+			{
+				return GetMinimapSubsystem()->LocalMinimapMapData;
+			}
+		}
+		
 		return GetMinimapSubsystem()->GetCurrentMinimapMapData();
 	}
 	
@@ -367,9 +388,9 @@ FVector2D UMainMapUserWidget::WidgetToWorld(FVector2D InLocalVector2D) const
 
 void UMainMapUserWidget::LocalPawnCenter()
 {
-	if (LocalPawn)
+	if (GetLocalPlayerActor())
 	{
-		const auto WidgetOffset = WorldToWidget(FVector2D(LocalPawn->GetActorLocation()), 1.0f);
+		const auto WidgetOffset = WorldToWidget(FVector2D(GetLocalPlayerActor()->GetActorLocation()), 1.0f);
 		Offset = -WidgetOffset;
 	}
 }

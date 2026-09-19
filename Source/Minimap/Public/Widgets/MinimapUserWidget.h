@@ -7,6 +7,7 @@
 #include "MinimapBaseUserWidget.h"
 #include "MinimapUserWidget.generated.h"
 
+class UZoomableCanvas;
 class UImage;
 class UOverlay;
 class UMapPinUserWidget;
@@ -47,6 +48,7 @@ protected:
 	void UpdateMarker(UMapPinUserWidget* MapPin, FGameplayTag CategoryTag, FVector2D WorldPosition2D, float Angle, bool bRotate = true) const;
 	void UpdateMarkers() const;
 	void UpdateMinimapImageParameters() const;
+	void UpdateTilesParameters() const;
 	
 	void UpdateMarkersVisibilities();
 	
@@ -79,7 +81,13 @@ public:
 #pragma endregion
 #pragma region Implement Widgets
 	UFUNCTION(BlueprintImplementableEvent, Category = "Minimap|Widgets")
-	UWidget* GetMinimapImageWidget() const;
+	UWidget* GetTiles(TArray<UMaterialInstanceDynamic*>& Tiles) const;
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "Minimap|Widgets")
+	UWidget* GetMinimapImageParentWidget() const;
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "Minimap|Widgets")
+	UZoomableCanvas* GetMinimapImageWidget() const;
 	
 	UFUNCTION(BlueprintImplementableEvent, Category = "Minimap|Widgets")
 	UWidget* GetViewAreaWidget() const;

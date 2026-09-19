@@ -17,10 +17,8 @@ void UZoomableCanvas::SynchronizeProperties()
 		MyZoomableCanvas->SetZoomStep(ZoomStep);
 		MyZoomableCanvas->SetMaxScale(MaxScale);
 		MyZoomableCanvas->SetMinScale(MinScale);
-		MyZoomableCanvas->SetEnableInput(bEnableInput);
 		MyZoomableCanvas->SetViewOffset(ViewOffset);
 		MyZoomableCanvas->SetViewScale(ViewScale);
-		MyZoomableCanvas->DebugMultiplier = DebugMultiplier;
 	}
 }
 
@@ -46,15 +44,6 @@ void UZoomableCanvas::SetViewOffset(FVector2D Offset)
 	if (MyZoomableCanvas.IsValid())
 	{
 		return MyZoomableCanvas->SetViewOffset(Offset);
-	}
-}
-
-void UZoomableCanvas::SetEnableInput(bool bNewEnableInput)
-{
-	bEnableInput = bNewEnableInput;
-	if (MyZoomableCanvas.IsValid())
-	{
-		return MyZoomableCanvas->SetEnableInput(bEnableInput);
 	}
 }
 
@@ -104,15 +93,6 @@ void UZoomableCanvas::SetMaxScale(float Scale)
 	}
 }
 
-void UZoomableCanvas::SetDebugMultiplier(float Multiplier)
-{
-	DebugMultiplier = Multiplier;
-	if (MyZoomableCanvas.IsValid())
-	{
-		MyZoomableCanvas->DebugMultiplier = DebugMultiplier;
-	}
-}
-
 void UZoomableCanvas::AddWidgetToCanvas(UWidget* InWidget, const FVector2D InPosition, const FVector2D InSize) const
 {
 	if (!InWidget)
@@ -127,6 +107,42 @@ void UZoomableCanvas::AddWidgetToCanvas(UWidget* InWidget, const FVector2D InPos
 
 	const auto TakeWidget = InWidget->TakeWidget();
 	MyZoomableCanvas->AddTile(TakeWidget, InPosition, InSize);
+}
+
+void UZoomableCanvas::RemoveWidgetFromCanvas(UWidget* InWidget) const
+{
+	if (!InWidget)
+	{
+		return;
+	}
+	
+	if (!MyZoomableCanvas.IsValid())
+	{
+		return;
+	}
+
+	const auto TakeWidget = InWidget->TakeWidget();
+	MyZoomableCanvas->RemoveTile(TakeWidget);
+}
+
+void UZoomableCanvas::ClearWidgets() const
+{
+	if (!MyZoomableCanvas.IsValid())
+	{
+		return;
+	}
+
+	MyZoomableCanvas->ClearTiles();
+}
+
+FVector2D UZoomableCanvas::GetPureDesiredSize() const
+{
+	if (!MyZoomableCanvas.IsValid())
+	{
+		return FVector2D::ZeroVector;
+	}
+
+	return MyZoomableCanvas->ComputeDesiredSize(0);
 }
 
 const FText UZoomableCanvas::GetPaletteCategory()

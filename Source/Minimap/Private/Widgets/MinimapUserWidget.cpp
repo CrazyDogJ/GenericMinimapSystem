@@ -9,6 +9,7 @@
 #include "Components/Image.h"
 #include "Components/Overlay.h"
 #include "Widgets/MinimapWidgetInterface.h"
+#include "Widgets/ZoomableCanvas.h"
 
 UMinimapUserWidget::UMinimapUserWidget(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -34,6 +35,7 @@ int32 UMinimapUserWidget::NativePaint(const FPaintArgs& Args, const FGeometry& A
 	UpdateNorthWidgets();
 	UpdateMarkers();
 	UpdateMinimapImageParameters();
+	UpdateTilesParameters();
 	
 	return Super::NativePaint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, LayerId, InWidgetStyle,
 	                          bParentEnabled);
@@ -254,20 +256,48 @@ void UMinimapUserWidget::UpdateMarkers() const
 
 void UMinimapUserWidget::UpdateMinimapImageParameters() const
 {
-	if (GetMinimapImageWidget())
+	if (GetMinimapImageParentWidget())
 	{
-		GetMinimapImageWidget()->SetRenderTransformAngle(bLockNorth ? 0.0f : GetViewAngle() * -1.0);
-
-		if (const auto ImageWidget = Cast<UImage>(GetMinimapImageWidget()))
+		GetMinimapImageParentWidget()->SetRenderTransformAngle(bLockNorth ? 0.0f : GetViewAngle() * -1.0);
+	}
+	
+	if (const auto ZoomableCanvas = GetMinimapImageWidget())
+	{
+		if (const auto CurrentMapData = GetCurrentMapData())
 		{
-			if (const auto MatDyn = ImageWidget->GetDynamicMaterial(); MatDyn && GetCurrentMapData())
-			{
-				const auto DeltaPosition = GetLocalPlayerTransform().GetLocation() - GetCurrentMapData()->CaptureActorLocation;
-				const float X = DeltaPosition.X / -GetCurrentMapData()->MapSize + 0.5;
-				const float Y = DeltaPosition.Y / GetCurrentMapData()->MapSize - 0.5;
-				MatDyn->SetVectorParameterValue("PlayerLocation", FVector(Y, X, 0.0f));
-				MatDyn->SetScalarParameterValue("Zoom", ZoomMultiplier);
-			}
+			const auto Scale = CurrentMapData->MapSize / InterpRadius / 2;
+			const auto DeltaPosition = GetLocalPlayerTransform().GetLocation() - GetCurrentMapData()->CaptureActorLocation;
+			const auto DeltaMapPos = DeltaPosition / GetCurrentMapData()->MapSize;
+			const FVector2D FinalAlpha = FVector2D(DeltaMapPos.Y, 1 - DeltaMapPos.X);
+			const auto Offset = (FinalAlpha * -2 * Scale + 1) * (ZoomableCanvas->GetPureDesiredSize() / 2);
+			ZoomableCanvas->SetViewScale(Scale);
+			ZoomableCanvas->SetViewOffset(Offset);
+		}
+	}
+}
+
+void UMinimapUserWidget::UpdateTilesParameters() const
+{
+	TArray<UMaterialInstanceDynamic*> Tiles;
+	const UWidget* RefWidget = GetTiles(Tiles);
+
+	if (!RefWidget)
+	{
+		return;
+	}
+	
+	const auto Geometry = RefWidget->GetPaintSpaceGeometry();
+	const FVector2D TopLeft(0.0f, 0.0f);
+	const FVector2D LocalTopLeft = Geometry.GetLocalPositionAtCoordinates(TopLeft);
+	const FVector2D Min = Geometry.GetAccumulatedRenderTransform().TransformVector(LocalTopLeft);
+	const FVector2D Max = Min + Geometry.GetAbsoluteSize();
+
+	for (const auto MID : Tiles)
+	{
+		if (MID)
+		{
+			MID->SetVectorParameterValue("Min", FLinearColor(Min.X, Min.Y,0,0));
+			MID->SetVectorParameterValue("Max", FLinearColor(Max.X, Max.Y,0,0));
 		}
 	}
 }
@@ -277,10 +307,10 @@ void UMinimapUserWidget::UpdateMarkersVisibilities()
 	const auto Interface = TryGetDataInterface();
 	if (Interface)
 	{
-		if (LocalPawn)
+		if (GetLocalPlayerActor())
 		{
 			TSet<FGuid> OutGuid;
-			Interface->QueryHotPoints(LocalPawn->GetActorLocation(), InterpRadius, OutGuid);
+			Interface->QueryHotPoints(GetLocalPlayerActor()->GetActorLocation(), InterpRadius, OutGuid);
 			for (const auto Id : OutGuid)
 			{
 				if (IsInRadius(Id))
@@ -378,7 +408,7 @@ bool UMinimapUserWidget::IsLocalPlayerMarker(const FGuid Guid) const
 {
 	if (const auto Interface = TryGetDataInterface())
 	{
-		return Interface->IsLocalPlayer(LocalPawn, Guid);
+		return Interface->IsLocalPlayer(Cast<APawn>(GetLocalPlayerActor()), Guid);
 	}
 
 	return false;

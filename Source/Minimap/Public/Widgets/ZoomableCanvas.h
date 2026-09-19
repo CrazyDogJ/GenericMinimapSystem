@@ -19,9 +19,6 @@ public:
 	virtual void ReleaseSlateResources(bool bReleaseChildren) override;
 	
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Appearance)
-	bool bEnableInput = false;
-	
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Appearance)
 	bool bDebug = false;
 	
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Appearance)
@@ -39,17 +36,11 @@ public:
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Appearance)
 	float MaxScale = 5.0f;
 	
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = Appearance)
-	float DebugMultiplier = 1.0f;
-	
 	UFUNCTION(BlueprintCallable, Category = Appearance)
 	void SetViewScale(float Scale);
 	
 	UFUNCTION(BlueprintCallable, Category = Appearance)
 	void SetViewOffset(FVector2D Offset);
-	
-	UFUNCTION(BlueprintCallable, Category = Appearance)
-	void SetEnableInput(bool bNewEnableInput);
 	
 	UFUNCTION(BlueprintCallable, Category = Appearance)
 	void SetDebugEnabled(bool Enable);
@@ -66,11 +57,18 @@ public:
 	UFUNCTION(BlueprintCallable, Category = Appearance)
 	void SetMaxScale(float Scale);
 	
-	UFUNCTION(BlueprintCallable, Category = Appearance)
-	void SetDebugMultiplier(float Multiplier);
-	
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Zoomable Canvas")
 	void AddWidgetToCanvas(UWidget* InWidget, FVector2D InPosition, FVector2D InSize) const;
+	
+	UFUNCTION(BlueprintCallable, Category = "Zoomable Canvas")
+	void RemoveWidgetFromCanvas(UWidget* InWidget) const;
+	
+	UFUNCTION(BlueprintCallable, Category = "Zoomable Canvas")
+	void ClearWidgets() const;
+	
+	// Using tiles slot array to calculate the actual size.
+	UFUNCTION(BlueprintCallable, Category = "Zoomable Canvas")
+	FVector2D GetPureDesiredSize() const;
 	
 #if WITH_EDITOR 
 	virtual const FText GetPaletteCategory() override;

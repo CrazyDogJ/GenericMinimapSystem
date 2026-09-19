@@ -20,40 +20,35 @@ public:
 	float GetScale() const;
 	void SetMinScale(float InScaleMin);
 	void SetMaxScale(float InScaleMax);
-	void SetEnableInput(bool bNewEnableInput);
 	void SetViewScale(float InViewScale);
 	void SetViewOffset(FVector2D InViewOffset);
 	
-	float DebugMultiplier = 1.0f;
-	
 	void Construct(const FArguments& InArgs);
  
-	// 添加 Tile 的接口
 	void AddTile(TSharedRef<SWidget> InWidget, FVector2D InPosition, FVector2D InSize);
+	void RemoveTile(TSharedRef<SWidget> InWidget);
+	void ClearTiles();
  
-	// SWidget 核心重写
 	virtual void OnArrangeChildren(const FGeometry& AllottedGeometry, FArrangedChildren& ArrangedChildren) const override;
 	virtual FVector2D ComputeDesiredSize(float LayoutScaleMultiplier) const override;
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 	virtual FChildren* GetChildren() override;
  
-	// 输入处理
-	virtual FReply OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
-	virtual FReply OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
-	virtual FReply OnMouseMove(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
-	virtual FReply OnMouseWheel(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
- 
 private:
-	struct FTileSlot {
+	struct FTileSlot 
+	{
 		TSharedRef<SWidget> Widget;
 		FVector2D Position;
 		FVector2D Size;
+		
+		bool operator==(const FTileSlot& Other) const
+		{
+			return Widget == Other.Widget;
+		}
 	};
  
 	TArray<FTileSlot> TileSlots;
-	TSlotlessChildren<SWidget> Children; // 子控件集合
- 
-	bool bEnableInput = false;
+	TSlotlessChildren<SWidget> Children;
 	
 #if !UE_BUILD_SHIPPING
 	bool bDebugScreenString = false;
@@ -64,6 +59,4 @@ private:
 	
 	FVector2D ViewOffset = FVector2D::ZeroVector;
 	float ViewScale = 1.0f;
-	bool bIsDragging = false;
-	FVector2D LastMousePos;
 };

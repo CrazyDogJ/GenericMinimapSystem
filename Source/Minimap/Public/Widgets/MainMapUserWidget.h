@@ -63,6 +63,9 @@ protected:
 	
 public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Minimap|Settings")
+	bool bShowLocal = false;
+	
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Minimap|Settings")
 	float MinScale = 0.5f;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Minimap|Settings")
@@ -109,6 +112,9 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, Category = "Minimap|Widgets")
 	FText GetDisplayScaleText() const;
+	
+	UFUNCTION(BlueprintPure, Category = "Minimap")
+	bool IsCurrentLocalMapDataValid() const;
 	
 	UFUNCTION(BlueprintPure, Category = "Minimap")
 	UMinimapMapData* GetCurrentGlobalMapData() const;
