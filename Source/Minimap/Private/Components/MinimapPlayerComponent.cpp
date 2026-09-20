@@ -2,7 +2,6 @@
 
 #include "Components/MinimapPlayerComponent.h"
 
-#include "EnhancedInputSubsystems.h"
 #include "MinimapBlueprintFunctionLibrary.h"
 #include "MinimapSubsystem.h"
 #include "MinimapZoneGraphAStar.h"
@@ -148,10 +147,12 @@ void UMinimapPlayerComponent::UpdateNavPath(const float& DeltaTime)
 	{
 		NavQueryEndPosition = Sub->LocalTempPinActor->GetActorLocation();
 		bShouldUpdateNavQuery = true;
+		NavQueryTime = NavQueryPeriod;
 	}
 	else
 	{
 		bShouldUpdateNavQuery = false;
+		NavQueryTime = 0.0f;
 	}
 	
 	// Should update nav query.
@@ -160,7 +161,10 @@ void UMinimapPlayerComponent::UpdateNavPath(const float& DeltaTime)
 		// Update nav query start position using local player actor location.
 		if (bAutoUpdateStartLocation)
 		{
-			NavQueryStartPosition = GetOwner()->GetActorLocation();
+			if (const auto OwningPlayerController = Cast<APlayerController>(GetOwner()))
+			{
+				NavQueryStartPosition = OwningPlayerController->GetPawn()->GetActorLocation();
+			}
 		}
 		// Update nav query period. Using task to do async task update.
 		NavQueryTime += DeltaTime;

@@ -58,6 +58,9 @@ public:
 	// Return is always on minimap.
 	virtual bool GetIsAlwaysOnMinimap(const FGuid& Id) const { return false; }
 	
+	// Return should add to screen overlay.
+	virtual bool GetIsOnOverlay(const FGuid& Id) const { return false; }
+	
 	// Return map pin add event.
 	virtual FMapPinChangeEvent* GetMapPinAddEvent() { return nullptr; }
 	

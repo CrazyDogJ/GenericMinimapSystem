@@ -7,6 +7,7 @@
 #include "MinimapSubsystem.h"
 #include "NetRelevantGlobalComponent.h"
 #include "NetRelevantObjectUtils.h"
+#include "Components/MinimapGlobal.h"
 #include "Net/UnrealNetwork.h"
 
 void AMapPinActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -100,6 +101,10 @@ void AMapPinActor::AddMapPin()
 		Object->ReplicatingData.bAddToOverlay = true;
 		Object->ReplicatingData.bHasYaw = false;
 		Object->ReplicatingData.bAlwaysOnMinimap = true;
+		if (const auto MinimapGlobal = Cast<UMinimapGlobal>(Global))
+		{
+			Object->ReplicatingData.CustomMainmapWidgetClass = MinimapGlobal->TempPinMainMapWidgetClass;
+		}
 		Global->BeginObjectLogic(Object);
 		Id = Object->Id;
 	}

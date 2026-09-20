@@ -26,6 +26,7 @@ protected:
 	FUserWidgetPool WidgetPool;
 
 	virtual void ReleaseSlateResources(bool bReleaseChildren) override;
+	virtual void NativeDestruct() override;
 	
 public:
 	UMinimapBaseUserWidget(const FObjectInitializer& ObjectInitializer);
@@ -52,7 +53,7 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Minimap|Settings")
 	TSet<FGameplayTag> HiddenCategoryTags;
 	
-	TSubclassOf<UMapPinUserWidget> GetCustomClass(const FGuid& Guid);
+	virtual TSubclassOf<UMapPinUserWidget> GetCustomClass(const FGuid& Guid);
 
 	IMinimapWidgetInterface* TryGetDataInterface() const;
 	

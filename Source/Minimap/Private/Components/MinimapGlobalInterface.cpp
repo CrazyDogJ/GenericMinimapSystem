@@ -264,6 +264,24 @@ bool UMinimapGlobal::GetIsAlwaysOnMinimap(const FGuid& Id) const
 	return IMinimapWidgetInterface::GetIsAlwaysOnMinimap(Id);
 }
 
+bool UMinimapGlobal::GetIsOnOverlay(const FGuid& Id) const
+{
+	if (const auto Found = LocalNetRelevantObjects.Find(Id))
+	{
+		const auto Object = *Found;
+		if (const auto MapPinObject = Cast<UMinimapPinObject>(Object))
+		{
+			return MapPinObject->ReplicatingData.bAddToOverlay;
+		}
+	}
+	else if (const auto MinimapData = LocalMapPins.Find(Id))
+	{
+		return MinimapData->bAddToOverlay;
+	}
+	
+	return IMinimapWidgetInterface::GetIsOnOverlay(Id);
+}
+
 FMapPinChangeEvent* UMinimapGlobal::GetMapPinAddEvent()
 {
 	return &OnMapPinAddEvent;

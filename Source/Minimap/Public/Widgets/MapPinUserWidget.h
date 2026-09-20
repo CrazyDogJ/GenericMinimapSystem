@@ -20,7 +20,10 @@ public:
 	TWeakObjectPtr<UObject> MinimapDataSourceObject;
 	
 	UFUNCTION(BlueprintPure)
-	FSlateBrush GetMapPinBrush();
+	FVector GetMapPinLocation() const;
+	
+	UFUNCTION(BlueprintPure)
+	FSlateBrush GetMapPinBrush() const;
 	
 	IMinimapWidgetInterface* TryGetInterface() const;
 	

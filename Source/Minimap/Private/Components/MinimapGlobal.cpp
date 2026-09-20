@@ -104,6 +104,8 @@ void UMinimapGlobal::AddTempPin_Implementation(AController* Controller, const FV
 		TempPin->PinSlateBrush = Brush;
 		TempPin->SetOwner(GetOwner()->GetOwner());
 		TempPin->FinishSpawning(FTransform(Location));
+		TempPin->OnRep_OwningController();
+		TempMapPinMapping.Add(Controller, TempPin);
 	}
 }
 

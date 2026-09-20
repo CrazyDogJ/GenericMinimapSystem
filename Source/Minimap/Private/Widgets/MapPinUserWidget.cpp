@@ -6,7 +6,7 @@
 #include "GameFramework/GameStateBase.h"
 #include "Widgets/MinimapWidgetInterface.h"
 
-FSlateBrush UMapPinUserWidget::GetMapPinBrush()
+FSlateBrush UMapPinUserWidget::GetMapPinBrush() const
 {
 	FSlateBrush Brush;
 	
@@ -16,6 +16,18 @@ FSlateBrush UMapPinUserWidget::GetMapPinBrush()
 	}
 	
 	return Brush;
+}
+
+FVector UMapPinUserWidget::GetMapPinLocation() const
+{
+	FVector Loc;
+	
+	if (const auto Interface = TryGetInterface())
+	{
+		Interface->GetLocation(Guid, Loc);
+	}
+	
+	return Loc;
 }
 
 IMinimapWidgetInterface* UMapPinUserWidget::TryGetInterface() const

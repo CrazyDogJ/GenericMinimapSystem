@@ -31,6 +31,9 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 	TMap<FGuid, FMinimapPinData> LocalMapPins;
 	
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	TSubclassOf<UMapPinUserWidget> TempPinMainMapWidgetClass;
+	
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
 	FGuid AddReplicatedMapPin(TSubclassOf<UMinimapPinObject> PinClass, APlayerController* OwnerController, const FName GroupName, const FMinimapPinData& PinData);
 	
@@ -70,6 +73,7 @@ public:
 	virtual bool GetBrush(const FGuid& Id, FSlateBrush& OutBrush) const override;
 	virtual bool GetCategoryTag(const FGuid& Id, FGameplayTag& OutTag) const override;
 	virtual bool GetIsAlwaysOnMinimap(const FGuid& Id) const override;
+	virtual bool GetIsOnOverlay(const FGuid& Id) const override;
 	virtual FMapPinChangeEvent* GetMapPinAddEvent() override;
 	virtual FMapPinChangeEvent* GetMapPinRemoveEvent() override;
 	// IMinimapWidgetInterface

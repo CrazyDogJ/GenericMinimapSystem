@@ -17,6 +17,13 @@ void UMinimapBaseUserWidget::ReleaseSlateResources(bool bReleaseChildren)
 	Super::ReleaseSlateResources(bReleaseChildren);
 }
 
+void UMinimapBaseUserWidget::NativeDestruct()
+{
+	WidgetPool.ReleaseAll(true);
+	
+	Super::NativeDestruct();
+}
+
 UMinimapBaseUserWidget::UMinimapBaseUserWidget(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer), WidgetPool(*this), LocalPawn(nullptr)
 {
