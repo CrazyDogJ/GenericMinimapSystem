@@ -40,6 +40,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FGuid AddLocalMapPin(const FMinimapPinData& PinData);
 	
+	void UpdateLocalMapPins();
+	
 	UFUNCTION(BlueprintCallable)
 	void AddLocalMapPinWithId(const FGuid Id, const FMinimapPinData& PinData);
 	

@@ -41,6 +41,18 @@ FGuid UMinimapGlobal::AddLocalMapPin(const FMinimapPinData& PinData)
 	return NewGuid;
 }
 
+void UMinimapGlobal::UpdateLocalMapPins()
+{
+	for (auto& LocalMapPin : LocalMapPins)
+	{
+		if (LocalMapPin.Value.AttachedComponent.IsValid())
+		{
+			LocalMapPin.Value.Location = LocalMapPin.Value.AttachedComponent->GetComponentLocation();
+			LocalMapPin.Value.Yaw = LocalMapPin.Value.AttachedComponent->GetComponentRotation().Yaw;
+		}
+	}
+}
+
 void UMinimapGlobal::AddLocalMapPinWithId(const FGuid Id, const FMinimapPinData& PinData)
 {
 	if (Id.IsValid())
@@ -127,6 +139,7 @@ void UMinimapGlobal::TickComponent(float DeltaTime, enum ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	UpdateLocalMapPins();
 	if (GetOwner()->HasAuthority())
 	{
 		for (int i = 0; i < NetRelevantObjects.Objects.Num(); ++i)
