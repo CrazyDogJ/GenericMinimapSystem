@@ -13,10 +13,7 @@ void UPinsOverlayUserWidget::OnMapPinAddEvent(const FGuid& Guid)
 {
 	if (const auto Interface = TryGetDataInterface())
 	{
-		if (Interface->GetIsOnOverlay(Guid))
-		{
-			AddMapPin(Guid);
-		}
+		AddMapPin(Guid);
 	}
 }
 
@@ -64,9 +61,32 @@ void UPinsOverlayUserWidget::NativeConstruct()
 	ManageEvents(true);
 }
 
+void UPinsOverlayUserWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+	
+	auto Interface = TryGetDataInterface();
+	if (!Interface)
+	{
+		return;
+	}
+	
+	for (const auto Marker : Markers)
+	{
+		if (Interface->GetIsOnOverlay(Marker.Key))
+		{
+			Marker.Value->SetVisibility(ESlateVisibility::Visible);
+		}
+		else
+		{
+			Marker.Value->SetVisibility(ESlateVisibility::Collapsed);
+		}
+	}
+}
+
 int32 UPinsOverlayUserWidget::NativePaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry,
-	const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId,
-	const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
+                                          const FSlateRect& MyCullingRect, FSlateWindowElementList& OutDrawElements, int32 LayerId,
+                                          const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
 {
 	auto Interface = TryGetDataInterface();
 	if (!Interface)
