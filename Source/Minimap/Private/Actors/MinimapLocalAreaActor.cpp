@@ -18,6 +18,8 @@ void AMinimapLocalAreaActor::OnBrushOverlapped(UPrimitiveComponent* OverlappedCo
 	bool bFromSweep, const FHitResult& SweepResult)
 {
 	const auto ShapeComponent = Cast<UShapeComponent>(OtherComp);
+	// 修复：触发重叠的组件也可能是网格，或其 Actor 正在销毁。
+	if (!ShapeComponent || !IsValid(ShapeComponent->GetOwner())) return;
 	const auto IsRoot = ShapeComponent->GetOwner()->GetRootComponent() == ShapeComponent;
 	const auto IsPawn = Cast<APawn>(ShapeComponent->GetOwner());
 	if (IsPawn && IsRoot && IsPawn->IsLocallyControlled())
@@ -33,6 +35,8 @@ void AMinimapLocalAreaActor::OnBrushEndOverlap(class UPrimitiveComponent* Overla
 	class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	const auto ShapeComponent = Cast<UShapeComponent>(OtherComp);
+	// 修复：触发重叠的组件也可能是网格，或其 Actor 正在销毁。
+	if (!ShapeComponent || !IsValid(ShapeComponent->GetOwner())) return;
 	const auto IsRoot = ShapeComponent->GetOwner()->GetRootComponent() == ShapeComponent;
 	const auto IsPawn = Cast<APawn>(ShapeComponent->GetOwner());
 	if (IsPawn && IsRoot && IsPawn->IsLocallyControlled())

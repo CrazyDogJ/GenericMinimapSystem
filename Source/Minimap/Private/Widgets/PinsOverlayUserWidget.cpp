@@ -28,13 +28,17 @@ void UPinsOverlayUserWidget::ManageEvents(const bool ManageEvents)
 	{
 		if (ManageEvents)
 		{
-			Interface->GetMapPinAddEvent()->AddUObject(this, &ThisClass::OnMapPinAddEvent);
-			Interface->GetMapPinRemoveEvent()->AddUObject(this, &ThisClass::OnMapPinRemoveEvent);
+			// 修复：数据接口的事件可以为空。
+			if (auto* Event = Interface->GetMapPinAddEvent()) Event->AddUObject(this, &ThisClass::OnMapPinAddEvent);
+			// 修复：数据接口的事件可以为空。
+			if (auto* Event = Interface->GetMapPinRemoveEvent()) Event->AddUObject(this, &ThisClass::OnMapPinRemoveEvent);
 		}
 		else
 		{
-			Interface->GetMapPinAddEvent()->RemoveAll(this);
-			Interface->GetMapPinRemoveEvent()->RemoveAll(this);
+			// 修复：数据接口的事件可以为空。
+			if (auto* Event = Interface->GetMapPinAddEvent()) Event->RemoveAll(this);
+			// 修复：数据接口的事件可以为空。
+			if (auto* Event = Interface->GetMapPinRemoveEvent()) Event->RemoveAll(this);
 		}
 	}
 }
@@ -103,8 +107,8 @@ int32 UPinsOverlayUserWidget::NativePaint(const FPaintArgs& Args, const FGeometr
 		{
 			bool bTargetBehindCamera = false;
 			FVector2D OutScreenLocation;
-			UMinimapBlueprintFunctionLibrary::ProjectWorldToScreenBidirectional(OwningPlayer, Location, 
-				OutScreenLocation, bTargetBehindCamera, true);
+			if (!UMinimapBlueprintFunctionLibrary::ProjectWorldToScreenBidirectional(OwningPlayer, Location,
+				OutScreenLocation, bTargetBehindCamera, true)) continue;
 			FVector2D ViewportSize = UWidgetLayoutLibrary::GetViewportSize(this);
 			double Zero = 0;
 			const bool bRound = !FMath::IsWithinInclusive(OutScreenLocation.X, Zero, ViewportSize.X)

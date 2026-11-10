@@ -19,6 +19,12 @@ void UMinimapBaseUserWidget::ReleaseSlateResources(bool bReleaseChildren)
 
 void UMinimapBaseUserWidget::NativeDestruct()
 {
+	// 修复：从面板摘除标记并清空索引，再把控件交还池中。
+	auto ReleasedMarkers = MoveTemp(Markers);
+	for (const auto& Pair : ReleasedMarkers)
+	{
+		if (IsValid(Pair.Value)) Pair.Value->RemoveFromParent();
+	}
 	WidgetPool.ReleaseAll(true);
 	
 	Super::NativeDestruct();
@@ -55,6 +61,8 @@ void UMinimapBaseUserWidget::AddMapPin(FGuid Guid)
 	if (Class && GetMarkersOverlay())
 	{
 		const auto NewPin = WidgetPool.GetOrCreateInstance<UMapPinUserWidget>(Class, Function);
+		// 修复：池可能没有可用于创建控件的玩家。
+		if (!NewPin) return;
 		if (!bConstructCalled)
 		{
 			NewPin->MinimapDataSourceObject = MinimapDataSourceObject;
@@ -70,8 +78,9 @@ void UMinimapBaseUserWidget::RemoveMapPin(FGuid Guid)
 	if (const auto Found = Markers.Find(Guid))
 	{
 		UMapPinUserWidget* MapPin = *Found;
-		MapPin->RemoveFromParent();
 		Markers.Remove(Guid);
+		if (!IsValid(MapPin)) return;
+		MapPin->RemoveFromParent();
 		WidgetPool.Release(MapPin);
 	}
 }
@@ -100,7 +109,7 @@ IMinimapWidgetInterface* UMinimapBaseUserWidget::TryGetDataInterface() const
 		return Cast<IMinimapWidgetInterface>(MinimapDataSourceObject.Get());
 	}
 	
-	if (const auto GS = GetWorld()->GetGameState())
+	if (const auto GS = GetWorld() ? GetWorld()->GetGameState() : nullptr)
 	{
 		if (const auto Global = GS->GetComponentByClass<UMinimapGlobal>())
 		{
@@ -132,7 +141,7 @@ bool UMinimapBaseUserWidget::ShouldHide(const FGameplayTag& InTag) const
 
 UMinimapSubsystem* UMinimapBaseUserWidget::GetMinimapSubsystem() const
 {
-	return GetWorld()->GetSubsystem<UMinimapSubsystem>();
+	return UWorld::GetSubsystem<UMinimapSubsystem>(GetWorld());
 }
 
 AActor* UMinimapBaseUserWidget::GetLocalPlayerActor() const

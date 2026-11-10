@@ -66,6 +66,15 @@ void UMinimapPlayerComponent::TickComponent(float DeltaTime, enum ELevelTick Tic
 
 void UMinimapPlayerComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	// 修复：控制器卸载时撤销全局通知并从视口移除它创建的界面。
+	if (auto* Sub = UWorld::GetSubsystem<UMinimapSubsystem>(GetWorld()))
+	{
+		Sub->OnMinimapGlobalReadyEvent.RemoveDynamic(this, &ThisClass::OnMinimapGlobalReadyEvent);
+	}
+	if (IsValid(MinimapUserWidget)) MinimapUserWidget->RemoveFromParent();
+	if (IsValid(MainMapUserWidget)) MainMapUserWidget->RemoveFromParent();
+	MinimapUserWidget = nullptr;
+	MainMapUserWidget = nullptr;
 	Super::EndPlay(EndPlayReason);
 	
 	// const auto OwningPlayerController = Cast<APlayerController>(GetOwner());
@@ -98,7 +107,8 @@ UMinimapUserWidget* UMinimapPlayerComponent::GetOrCreateMinimapWidget(UObject* D
 	if (OwningPlayerController && OwningPlayerController->IsLocalPlayerController() && MinimapClass)
 	{
 		MinimapUserWidget = CreateWidget<UMinimapUserWidget, APlayerController*>(OwningPlayerController, MinimapClass);
-		MinimapUserWidget->MinimapDataSourceObject = DataSourceObject;
+		// 修复：玩家退出或控件类无效时，CreateWidget 可能失败。
+		if (MinimapUserWidget) MinimapUserWidget->MinimapDataSourceObject = DataSourceObject;
 	}
 
 	return MinimapUserWidget;
@@ -124,7 +134,8 @@ UMainMapUserWidget* UMinimapPlayerComponent::GetOrCreateMainMapWidget(UObject* D
 	if (OwningPlayerController && OwningPlayerController->IsLocalPlayerController() && MainMapClass)
 	{
 		MainMapUserWidget = CreateWidget<UMainMapUserWidget, APlayerController*>(OwningPlayerController, MainMapClass);
-		MainMapUserWidget->MinimapDataSourceObject = DataSourceObject;
+		// 修复：玩家退出或控件类无效时，CreateWidget 可能失败。
+		if (MainMapUserWidget) MainMapUserWidget->MinimapDataSourceObject = DataSourceObject;
 	}
 
 	return MainMapUserWidget;
@@ -143,11 +154,11 @@ void UMinimapPlayerComponent::UpdateNavPath(const float& DeltaTime)
 		return;
 	}
 
-	if (Sub->LocalTempPinActor)
+	if (IsValid(Sub->LocalTempPinActor))
 	{
 		NavQueryEndPosition = Sub->LocalTempPinActor->GetActorLocation();
+		if (!bShouldUpdateNavQuery) NavQueryTime = NavQueryPeriod;
 		bShouldUpdateNavQuery = true;
-		NavQueryTime = NavQueryPeriod;
 	}
 	else
 	{
@@ -163,20 +174,26 @@ void UMinimapPlayerComponent::UpdateNavPath(const float& DeltaTime)
 		{
 			if (const auto OwningPlayerController = Cast<APlayerController>(GetOwner()))
 			{
-				NavQueryStartPosition = OwningPlayerController->GetPawn()->GetActorLocation();
+				// 修复：重生或旁观时控制器可能没有 Pawn。
+				const auto Pawn = OwningPlayerController->GetPawn();
+				if (!IsValid(Pawn))
+				{
+					bPathPointsValid = false;
+					return;
+				}
+				NavQueryStartPosition = Pawn->GetActorLocation();
 			}
 		}
-		// Update nav query period. Using task to do async task update.
+		// Update nav query period.
 		NavQueryTime += DeltaTime;
 		if (NavQueryTime >= NavQueryPeriod)
 		{
 			NavQueryTime = 0.0f;
-			UE::Tasks::Launch(UE_SOURCE_LOCATION, [this]()
-			{
-				FMinimapZoneGraphLanePath OutPath;
-				bPathPointsValid = UMinimapZoneGraphAStarLibrary::GetZoneGraphPathBP(this, NavQueryStartPosition, NavQueryEndPosition, NavQueryExtend, OutPath);
-				UMinimapZoneGraphAStarLibrary::GetPathPoints(this, OutPath, NavQueryOutPathPoints);
-			});
+			// 修复：ZoneGraph 属于当前世界，查询与结果发布均在游戏线程按周期执行。
+			FMinimapZoneGraphLanePath OutPath;
+			NavQueryOutPathPoints.Reset();
+			bPathPointsValid = UMinimapZoneGraphAStarLibrary::GetZoneGraphPathBP(this, NavQueryStartPosition, NavQueryEndPosition, NavQueryExtend, OutPath)
+				&& UMinimapZoneGraphAStarLibrary::GetPathPoints(this, OutPath, NavQueryOutPathPoints);
 		}
 	}
 }

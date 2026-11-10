@@ -13,7 +13,7 @@ void UMinimapUserSettings::K2_SaveConfig(UObject* WorldContextObject)
 		return;
 	}
 
-	if (const auto Subsystem = WorldContextObject->GetWorld()->GetSubsystem<UMinimapSubsystem>())
+	if (const auto Subsystem = UWorld::GetSubsystem<UMinimapSubsystem>(WorldContextObject->GetWorld()) /* 修复：支持无世界的配置对象 */)
 	{
 		Subsystem->OnMinimapUserSettingsChangedEvent.Broadcast(this);
 	}

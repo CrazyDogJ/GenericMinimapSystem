@@ -74,8 +74,8 @@ bool UMinimapUserWidget::IsInRadius(const FVector& CenterLocation, const FGuid& 
 	if (const auto Interface = TryGetDataInterface())
 	{
 		FVector OutCheckLocation;
-		Interface->GetLocation(InMapPinId, OutCheckLocation);
-		return IsInRadius(CenterLocation, OutCheckLocation, InterpRadius);
+		// 修复：没有有效定位时避免读取未初始化坐标。
+		return Interface->GetLocation(InMapPinId, OutCheckLocation) && IsInRadius(CenterLocation, OutCheckLocation, InterpRadius);
 	}
 
 	// Default is not in radius if we can't find the check location.
@@ -355,7 +355,9 @@ float UMinimapUserWidget::GetMinimapDisplayRadius_Implementation()
 
 float UMinimapUserWidget::GetViewAngle_Implementation() const
 {
-	return GetOwningPlayer()->GetControlRotation().Yaw;
+	// 修复：构造预览和切换控制器时控件可能没有所属玩家。
+	const auto Player = GetOwningPlayer();
+	return Player ? Player->GetControlRotation().Yaw : 0.0f;
 }
 
 FTransform UMinimapUserWidget::GetLocalPlayerTransform_Implementation() const

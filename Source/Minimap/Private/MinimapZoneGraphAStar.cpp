@@ -267,6 +267,8 @@ float UMinimapZoneGraphAStarLibrary::GetZoneWidthByLaneIndex(const UObject* Worl
 	const UWorld* World = WorldContext->GetWorld();
 	if (!World) return false;
 	const auto ZoneGraph = UWorld::GetSubsystem<UZoneGraphSubsystem>(World);
+	// 修复：导航数据可能尚未注册或已随分区卸载。
+	if (!ZoneGraph || !ZoneStorage.Lanes.IsValidIndex(LaneIndex)) return 0.0f;
 	auto StartZoneData = ZoneStorage.GetZoneDataFromLaneIndex(LaneIndex);
 	
 	float ZoneWidth = 0.0f;
@@ -288,22 +290,26 @@ bool UMinimapZoneGraphAStarLibrary::GetZoneGraphPathBP(const UObject* WorldConte
 	if (!World) return false;
 	const auto ZoneGraph = UWorld::GetSubsystem<UZoneGraphSubsystem>(World);
     
+    // 修复：重复使用输出或寻路失败时不能保留旧距离与车道。
+    Path = FMinimapZoneGraphLanePath();
+    if (!ZoneGraph) return false;
     FZoneGraphLaneLocation StartOutLaneLocation;
     float StartOutDistanceSqr;
-    ZoneGraph->FindNearestLane(FBox(StartPosition - SearchExtent, StartPosition + SearchExtent), FZoneGraphTagFilter(), StartOutLaneLocation, StartOutDistanceSqr);
+    if (!ZoneGraph->FindNearestLane(FBox(StartPosition - SearchExtent, StartPosition + SearchExtent), FZoneGraphTagFilter(), StartOutLaneLocation, StartOutDistanceSqr)) return false;
 	
     FZoneGraphLaneLocation StartNearestLaneLocation;
     float StartNearestDistanceSqr;
-    ZoneGraph->FindNearestLocationOnLane(StartOutLaneLocation.LaneHandle, FBox(StartPosition - SearchExtent, StartPosition + SearchExtent), StartNearestLaneLocation, StartNearestDistanceSqr);
+    if (!ZoneGraph->FindNearestLocationOnLane(StartOutLaneLocation.LaneHandle, FBox(StartPosition - SearchExtent, StartPosition + SearchExtent), StartNearestLaneLocation, StartNearestDistanceSqr)) return false;
 
     FZoneGraphLaneLocation EndOutLaneLocation;
     float EndOutDistanceSqr;
-    ZoneGraph->FindNearestLane(FBox(DestPosition - SearchExtent, DestPosition + SearchExtent), FZoneGraphTagFilter(), EndOutLaneLocation, EndOutDistanceSqr);
+    if (!ZoneGraph->FindNearestLane(FBox(DestPosition - SearchExtent, DestPosition + SearchExtent), FZoneGraphTagFilter(), EndOutLaneLocation, EndOutDistanceSqr)) return false;
     
     FZoneGraphLaneLocation EndNearestLaneLocation;
     float EndNearestDistanceSqr;
-    ZoneGraph->FindNearestLocationOnLane(EndOutLaneLocation.LaneHandle, FBox(DestPosition - SearchExtent, DestPosition + SearchExtent), EndNearestLaneLocation, EndNearestDistanceSqr);
+    if (!ZoneGraph->FindNearestLocationOnLane(EndOutLaneLocation.LaneHandle, FBox(DestPosition - SearchExtent, DestPosition + SearchExtent), EndNearestLaneLocation, EndNearestDistanceSqr)) return false;
 
+    if (StartNearestLaneLocation.LaneHandle.DataHandle != EndNearestLaneLocation.LaneHandle.DataHandle) return false;
     if (const AZoneGraphData* Data = ZoneGraph->GetZoneGraphData(StartOutLaneLocation.LaneHandle.DataHandle))
     {
         const FZoneGraphStorage& ZoneGraphStorage = Data->GetStorage();
@@ -352,7 +358,14 @@ bool UMinimapZoneGraphAStarLibrary::GetPathPoints(const UObject* WorldContext, c
 	if (!World) return false;
 	const auto ZoneGraph = UWorld::GetSubsystem<UZoneGraphSubsystem>(World);
 	const auto DataHandle = Path.Path.Lanes[0].DataHandle;
-	const FZoneGraphStorage& ZoneStorage = *ZoneGraph->GetZoneGraphStorage(DataHandle);
+	// 修复：保存的路径可能来自已卸载的图，或车道数和距离数不一致。
+	const auto* Storage = ZoneGraph ? ZoneGraph->GetZoneGraphStorage(DataHandle) : nullptr;
+	if (!Storage || Path.Distances.Num() != Path.Path.Lanes.Num()) return false;
+	const FZoneGraphStorage& ZoneStorage = *Storage;
+	for (const auto& Lane : Path.Path.Lanes)
+	{
+		if (Lane.DataHandle != DataHandle || !ZoneStorage.Lanes.IsValidIndex(Lane.Index)) return false;
+	}
 
 	PathPoints.Add(Path.Path.StartLaneLocation.Position);
 	
@@ -418,8 +431,10 @@ TArray<FVector> UMinimapZoneGraphAStarLibrary::ConvertLaneToPoints(const FZoneGr
 	FZoneGraphLaneLocation EndLocation = InEndLocation;
 
 	// At least one location must be valid
-	ensure(StartLocation.LaneHandle.IsValid() || EndLocation.LaneHandle.IsValid());
-	const FZoneLaneData& Lane = StartLocation.IsValid() ? ZoneStorage.Lanes[StartLocation.LaneHandle.Index] : ZoneStorage.Lanes[EndLocation.LaneHandle.Index];
+	// 修复：查找失败时两个位置都可能无效，避免负索引访问。
+	const int32 LaneIndex = StartLocation.IsValid() ? StartLocation.LaneHandle.Index : EndLocation.LaneHandle.Index;
+	if (!ZoneStorage.Lanes.IsValidIndex(LaneIndex)) return Result;
+	const FZoneLaneData& Lane = ZoneStorage.Lanes[LaneIndex];
 
 	// If both are valid, they must be on the same lane
 	if (StartLocation.LaneHandle.IsValid() && EndLocation.LaneHandle.IsValid())

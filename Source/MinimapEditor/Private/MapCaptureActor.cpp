@@ -309,9 +309,8 @@ void AMapCaptureActor::OverwriteExistingTextureFromRenderTarget(UTexture2D* Targ
 	TArray<FColor> OutPixels;
     
 	// ReadPixels 是一个同步操作，会阻塞直到 GPU 完成渲染
-	RTResource->ReadPixels(OutPixels);
- 
-	if (OutPixels.Num() == 0) return;
+	// 修复：读取失败或尺寸变化时，不能向纹理源复制不完整的像素缓冲区。
+	if (!RTResource->ReadPixels(OutPixels) || Size.X <= 0 || Size.Y <= 0 || OutPixels.Num() != int64(Size.X) * Size.Y) return;
  
 	// 2. 准备更新纹理的 Source 数据
 	// 关键：这里直接操作 TargetTexture 的 Source，而不是创建新对象

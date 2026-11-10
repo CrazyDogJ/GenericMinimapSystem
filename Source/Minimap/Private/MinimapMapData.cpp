@@ -56,7 +56,8 @@ void UMinimapMapData::QueryRecursive(const TArray<FSerializableQuadtreeNode>& No
 	// 递归子节点
 	for (int32 ChildIndex : Node.Children)
 	{
-		if (ChildIndex != -1)
+		// 修复：已保存的索引树可能受旧构建逻辑影响，跳过自环和反向边。
+		if (ChildIndex > NodeIndex)
 		{
 			QueryRecursive(Nodes, ChildIndex, QueryBounds, OutResults);
 		}
@@ -134,7 +135,8 @@ int32 UMinimapMapData::BuildRecursive(TArray<FSerializableQuadtreeNode>& Nodes, 
 		if (ChildIndices[i].Num() > 0)
 		{
 			int32 ChildNodeIndex = BuildRecursive(Nodes, ChildBounds[i], ChildIndices[i], Depth + 1);
-			Node.Children[i] = ChildNodeIndex; // 记录子节点索引
+			// 修复：递归添加节点可能使 Nodes 扩容，必须按索引重新取得父节点。
+			Nodes[CurrentNodeIndex].Children[i] = ChildNodeIndex;
 		}
 	}
 	

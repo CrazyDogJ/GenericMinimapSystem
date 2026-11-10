@@ -53,7 +53,8 @@ bool UMinimapBlueprintFunctionLibrary::ProjectWorldToScreenBidirectional(APlayer
     bool bSuccess = false;
 
     ULocalPlayer* const LP = Player ? Player->GetLocalPlayer() : nullptr;
-    if (LP && LP->ViewportClient)
+    // 修复：视口创建前或关闭后不能请求投影数据。
+    if (LP && LP->ViewportClient && LP->ViewportClient->Viewport)
     {
         // get the projection data
         FSceneViewProjectionData ProjectionData;

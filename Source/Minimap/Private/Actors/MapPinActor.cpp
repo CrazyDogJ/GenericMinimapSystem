@@ -50,6 +50,8 @@ void AMapPinActor::Overlapped(UPrimitiveComponent* OverlappedComponent, AActor* 
 	
 	// Main function, only work for owning controller's pawn.
 	const auto ShapeComponent = Cast<UShapeComponent>(OtherComp);
+	// 修复：触发重叠的组件也可能是网格，或其 Actor 正在销毁。
+	if (!ShapeComponent || !IsValid(ShapeComponent->GetOwner())) return;
 	const auto IsRoot = ShapeComponent->GetOwner()->GetRootComponent() == ShapeComponent;
 	const auto IsPawn = Cast<APawn>(ShapeComponent->GetOwner());
 	if (OwningController && OwningController->GetPawn() == OtherActor && IsRoot && IsPawn)
@@ -69,6 +71,8 @@ void AMapPinActor::BeginPlay()
 	Super::BeginPlay();
 	
 	InitializeOwningController();
+	// 修复：缺少控制器时初始化会销毁标记，不再创建关联对象。
+	if (IsActorBeingDestroyed()) return;
 	AddMapPin();
 	InitializeCollision();
 }
@@ -96,6 +100,7 @@ void AMapPinActor::AddMapPin()
 	if (const auto Global = UNetRelevantObjectFunctionLibrary::GetNetRelevantGlobalComponent(this))
 	{
 		const auto Object = Global->AddNetRelevantObject<UMinimapPinObject>(Cast<APlayerController>(OwningController), GLOBAL_GROUP);
+		if (!Object) return;
 		Object->ReplicatingData.AttachedComponent = GetRootComponent();
 		Object->ReplicatingData.Brush = PinSlateBrush;
 		Object->ReplicatingData.bAddToOverlay = true;
@@ -134,6 +139,7 @@ void AMapPinActor::InitializeCollision()
 	{
 		const FTransform emptyTransform;
 		SphereCollision = Cast<USphereComponent>(AddComponentByClass(USphereComponent::StaticClass(), false, emptyTransform, false));
+		if (!SphereCollision) return;
 		SphereCollision->SetCollisionResponseToAllChannels(ECR_Overlap);
 		SphereCollision->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 		SphereCollision->SetGenerateOverlapEvents(true);
@@ -158,7 +164,7 @@ void AMapPinActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		if (const auto MinimapSubsystem = GetWorld()->GetSubsystem<UMinimapSubsystem>())
 		{
-			MinimapSubsystem->LocalTempPinActor = nullptr;
+			if (MinimapSubsystem->LocalTempPinActor == this) MinimapSubsystem->LocalTempPinActor = nullptr;
 		}
 	}
 }

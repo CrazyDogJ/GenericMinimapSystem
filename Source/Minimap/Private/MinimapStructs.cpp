@@ -104,8 +104,9 @@ void FPoiStateList::AddPoi(const FString& LevelName, const FGuid& PoiIndex)
 		if (Found->Add(PoiIndex))
 		{
 			auto NewEntry = FPoiStateEntry(LevelName, PoiIndex);
-			PoiStateEntries.Add(NewEntry);
-			MarkItemDirty(NewEntry);
+			// 修复：标记数组中的实际元素，使复制状态跟随元素生命周期。
+			const int32 Index = PoiStateEntries.Add(NewEntry);
+			MarkItemDirty(PoiStateEntries[Index]);
 
 			if (GetSubsystem())
 			{
@@ -128,11 +129,6 @@ void FPoiStateList::RemovePoi(const FString& LevelName, const FGuid& PoiIndex)
 		return;
 	}
 	
-	if (GetSubsystem())
-	{
-		GetSubsystem()->OnHotPointRemoveEvent.Broadcast(LevelName, PoiIndex);
-	}
-	
 	if (Found->Remove(PoiIndex))
 	{
 		PoiStateEntries.Remove(FPoiStateEntry(LevelName, PoiIndex));
@@ -140,6 +136,8 @@ void FPoiStateList::RemovePoi(const FString& LevelName, const FGuid& PoiIndex)
 
 		// Remove empty level category.
 		TryRemoveEmpty(LevelName);
+		// 修复：事件可修改 PoiStateMap，完成删除后再广播。
+		if (auto* Sub = GetSubsystem()) Sub->OnHotPointRemoveEvent.Broadcast(LevelName, PoiIndex);
 	}
 }
 
