@@ -122,8 +122,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Minimap")
 	UMinimapMapData* GetCurrentMapData() const;
 
+	// Clamp is default to be true, and a spacial situation if you want to add overlay to the map.
 	UFUNCTION(BlueprintPure, Category = "Minimap")
-	FVector2D GetWidgetPosition(const FVector2D InWorldPosition2D) const;
+	FVector2D GetWidgetPosition(const FVector2D InWorldPosition2D, bool bClamp = true) const;
 
 	UFUNCTION(BlueprintPure, Category = "Minimap")
 	bool IsLocalPlayerMarker(const FGuid Guid) const;

@@ -395,14 +395,17 @@ UMinimapMapData* UMinimapUserWidget::GetCurrentMapData() const
 	return nullptr;
 }
 
-FVector2D UMinimapUserWidget::GetWidgetPosition(const FVector2D InWorldPosition2D) const
+FVector2D UMinimapUserWidget::GetWidgetPosition(const FVector2D InWorldPosition2D, bool bClamp) const
 {
 	const auto LocalPlayer2D = FVector2D(GetLocalPlayerTransform().GetLocation());
 	const FVector2D TempPosition = (LocalPlayer2D - InWorldPosition2D) / InterpRadius * GetDesiredRadius();
 	FVector2D Direction;
 	float Length;
 	TempPosition.ToDirectionAndLength(Direction, Length);
-	Length = FMath::Clamp(Length, 0.0f, GetDesiredRadius());
+	if (bClamp)
+	{
+		Length = FMath::Clamp(Length, 0.0f, GetDesiredRadius());
+	}
 	return FVector2D((Direction * Length).Y * -1, (Direction * Length).X);
 }
 
