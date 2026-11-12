@@ -13,7 +13,9 @@ void UZoomableCanvas::SynchronizeProperties()
 
 	if (MyZoomableCanvas.IsValid())
 	{
+#if !UE_BUILD_SHIPPING
 		MyZoomableCanvas->SetDebugScreenString(bDebug);
+#endif
 		MyZoomableCanvas->SetZoomStep(ZoomStep);
 		MyZoomableCanvas->SetMaxScale(MaxScale);
 		MyZoomableCanvas->SetMinScale(MinScale);
@@ -52,7 +54,9 @@ void UZoomableCanvas::SetDebugEnabled(bool Enable)
 	bDebug = Enable;
 	if (MyZoomableCanvas.IsValid())
 	{
+#if !UE_BUILD_SHIPPING
 		return MyZoomableCanvas->SetDebugScreenString(bDebug);
+#endif
 	}
 }
 
@@ -145,10 +149,12 @@ FVector2D UZoomableCanvas::GetPureDesiredSize() const
 	return MyZoomableCanvas->ComputeDesiredSize(0);
 }
 
+#if WITH_EDITOR 
 const FText UZoomableCanvas::GetPaletteCategory()
 {
 	return LOCTEXT("Common", "Common");
 }
+#endif
 
 TSharedRef<SWidget> UZoomableCanvas::RebuildWidget()
 {

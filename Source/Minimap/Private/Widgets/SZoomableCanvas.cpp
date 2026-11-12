@@ -10,12 +10,12 @@ SZoomableCanvas::SZoomableCanvas()
 	: Children(this)
 {
 }
-
+#if !UE_BUILD_SHIPPING
 void SZoomableCanvas::SetDebugScreenString(bool bNewDebugScreenString)
 {
 	bDebugScreenString = bNewDebugScreenString;
 }
-
+#endif
 void SZoomableCanvas::SetZoomStep(float InZoomStep)
 {
 	ZoomStep = InZoomStep;
@@ -90,7 +90,9 @@ void SZoomableCanvas::OnArrangeChildren(const FGeometry& AllottedGeometry, FArra
 		// 仅当 Tile 与当前视图区域相交时才添加（虚拟化）
 		if (FSlateRect::DoRectanglesIntersect(VisibleRect, ChildRect))
 		{
+#if !UE_BUILD_SHIPPING
 			VisibleCount++;
+#endif
 			ArrangedChildren.AddWidget(AllottedGeometry.MakeChild(
 				Slot.Widget,
 				ChildLocalPos,
