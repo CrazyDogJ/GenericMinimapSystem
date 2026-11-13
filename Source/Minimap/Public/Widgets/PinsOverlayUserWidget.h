@@ -10,6 +10,8 @@ UCLASS()
 class MINIMAP_API UPinsOverlayUserWidget : public UMinimapBaseUserWidget
 {
 	GENERATED_BODY()
+
+	virtual void ShowDiscoveredPoi(FGuid Id) override;
 	
 public:
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)

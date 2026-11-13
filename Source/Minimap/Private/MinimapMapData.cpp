@@ -11,7 +11,12 @@ TArray<FGuid> UMinimapMapData::QueryBox(FBox2D Box)
 	TArray<FGuid> Results;
 	if (HotPointInfos.Num() == 0) return Results;
 
-	QueryRecursive(QuadtreeNodes, 0, Box, Results);
+	if (QuadtreeNodes.IsEmpty())
+	{
+		for (const auto& Pair : HotPointInfos)
+			if (Box.IsInsideOrOn(FVector2D(Pair.Value.Location))) Results.Add(Pair.Key);
+	}
+	else QueryRecursive(QuadtreeNodes, 0, Box, Results);
 	return Results;
 }
 
@@ -28,7 +33,13 @@ TArray<FGuid> UMinimapMapData::QueryRange(const FVector& Center, float Radius)
 		Center2D.Y + Radius)
 	);
 
-	QueryRecursive(QuadtreeNodes, 0, QueryBounds, Results);
+	if (Radius < 0) return Results;
+	Results = QueryBox(QueryBounds);
+	const double RadiusSquared = FMath::Square(static_cast<double>(Radius));
+	Results.RemoveAll([&](FGuid Id)
+	{
+		return FVector2D::DistSquared(Center2D, FVector2D(HotPointInfos.FindChecked(Id).Location)) > RadiusSquared;
+	});
 	return Results;
 }
 
@@ -46,7 +57,7 @@ void UMinimapMapData::QueryRecursive(const TArray<FSerializableQuadtreeNode>& No
 		if (const auto Found = HotPointInfos.Find(Index))
 		{
 			const FVector2D Loc = FVector2D(Found->Location);
-			if (QueryBounds.IsInside(Loc))
+			if (QueryBounds.IsInsideOrOn(Loc))
 			{
 				OutResults.Add(Index);
 			}
@@ -120,7 +131,7 @@ int32 UMinimapMapData::BuildRecursive(TArray<FSerializableQuadtreeNode>& Nodes, 
 
 			for (int32 i = 0; i < 4; ++i)
 			{
-				if (ChildBounds[i].IsInside(Loc))
+				if (ChildBounds[i].IsInsideOrOn(Loc))
 				{
 					ChildIndices[i].Add(Guid);
 					break;
@@ -157,11 +168,13 @@ void UMinimapMapData::BuildHotPointsQuadTree()
 		if (Itr.Value.CategoryTag.IsValid())
 		{
 			const auto Category = FindOrCreateCategory(Itr.Value.CategoryTag);
-			Category->Indices.Add(Itr.Value.HotPointId);
+			Category->Indices.Add(Itr.Key);
 		}
 	}
 	
-	BuildRecursive(QuadtreeNodes, GetWorldBounds(), Indices, 0);
+	FBox2D Bounds = GetWorldBounds();
+	for (const auto& Pair : HotPointInfos) Bounds += FVector2D(Pair.Value.Location);
+	BuildRecursive(QuadtreeNodes, Bounds, Indices, 0);
 }
 #endif
 

@@ -61,6 +61,8 @@ public:
 	// Return should add to screen overlay.
 	virtual bool GetIsOnOverlay(const FGuid& Id) const { return false; }
 	
+	virtual void GetNameAndDescription(const FGuid& Id, FText& OutName, FText& OutDesc) const { return; }
+	
 	// Return map pin add event.
 	virtual FMapPinChangeEvent* GetMapPinAddEvent() { return nullptr; }
 	

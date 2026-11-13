@@ -19,11 +19,14 @@ public:
 	UPROPERTY()
 	TWeakObjectPtr<UObject> MinimapDataSourceObject;
 	
-	UFUNCTION(BlueprintPure)
+	UFUNCTION(BlueprintPure, Category = "Minimap")
 	FVector GetMapPinLocation() const;
 	
-	UFUNCTION(BlueprintPure)
+	UFUNCTION(BlueprintPure, Category = "Minimap")
 	FSlateBrush GetMapPinBrush() const;
+	
+	UFUNCTION(BlueprintPure, Category = "Minimap")
+	void GetNameAndDescription(FText& OutName, FText& OutDescription) const;
 	
 	IMinimapWidgetInterface* TryGetInterface() const;
 	

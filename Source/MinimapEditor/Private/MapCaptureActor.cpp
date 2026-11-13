@@ -117,6 +117,9 @@ void AMapCaptureActor::CaptureHotPoints() const
 		UPackage* Package = CreatePackage(*AssetPath);
 		if (UMinimapMapData* NewMapInfo = NewObject<UMinimapMapData>(Package, *AssetName, RF_Public | RF_Standalone))
 		{
+			NewMapInfo->LevelName = MapName;
+			NewMapInfo->MapSize = EndPoint.X;
+			NewMapInfo->CaptureActorLocation = GetActorLocation();
 			WriteHotPoints(NewMapInfo);
 		}
 		// save mapper class
@@ -209,6 +212,7 @@ void AMapCaptureActor::WriteHotPoints(UMinimapMapData* DataAsset) const
 	}
 
 	DataAsset->Modify();
+	DataAsset->LevelName = MapName;
 	DataAsset->HotPointInfos.Empty();
 	TArray<AActor*> OutActors;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AMapHotPointActor::StaticClass(), OutActors);
@@ -216,8 +220,11 @@ void AMapCaptureActor::WriteHotPoints(UMinimapMapData* DataAsset) const
 	{
 		if (const auto Point = Cast<AMapHotPointActor>(Actor))
 		{
-			DataAsset->HotPointInfos.Add(Point->PoiInfo.HotPointId, Point->PoiInfo);
 			Point->Modify();
+			if (!Point->PoiInfo.HotPointId.IsValid() || DataAsset->HotPointInfos.Contains(Point->PoiInfo.HotPointId))
+				Point->PoiInfo.HotPointId = FGuid::NewGuid();
+			Point->PoiInfo.Location = Point->GetActorLocation();
+			DataAsset->HotPointInfos.Add(Point->PoiInfo.HotPointId, Point->PoiInfo);
 			Point->HotPointLevelName = MapName;
 			// ReSharper disable once CppExpressionWithoutSideEffects
 			Point->MarkPackageDirty();

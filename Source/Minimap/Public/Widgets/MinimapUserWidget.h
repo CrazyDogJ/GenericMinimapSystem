@@ -82,6 +82,10 @@ public:
 #pragma region Implement Widgets
 	UFUNCTION(BlueprintImplementableEvent, Category = "Minimap|Widgets")
 	UWidget* GetTiles(TArray<UMaterialInstanceDynamic*>& Tiles) const;
+
+	/** Materials used by the MapImage of the active tile widgets. */
+	UFUNCTION(BlueprintPure, Category = "Minimap|Widgets")
+	static TArray<UMaterialInstanceDynamic*> GetTileMaterials(const TArray<UUserWidget*>& Entries, UUserWidget* LocalTile);
 	
 	UFUNCTION(BlueprintImplementableEvent, Category = "Minimap|Widgets")
 	UWidget* GetMinimapImageParentWidget() const;
@@ -121,6 +125,8 @@ public:
 #pragma region Functions
 	UFUNCTION(BlueprintPure, Category = "Minimap")
 	UMinimapMapData* GetCurrentMapData() const;
+	virtual UMinimapMapData* GetPoiMap() const override { return GetCurrentMapData(); }
+	virtual void ShowDiscoveredPoi(FGuid Id) override { OnMapPinAdd(Id); }
 
 	// Clamp is default to be true, and a spacial situation if you want to add overlay to the map.
 	UFUNCTION(BlueprintPure, Category = "Minimap")

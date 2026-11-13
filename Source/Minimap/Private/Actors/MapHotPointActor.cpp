@@ -4,6 +4,10 @@
 #include "Actors/MapHotPointActor.h"
 
 #include "Components/BillboardComponent.h"
+#include "Components/MinimapPlayerComponent.h"
+#include "MinimapSubsystem.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/PlayerController.h"
 
 AMapHotPointActor::AMapHotPointActor()
 {
@@ -26,27 +30,30 @@ AMapHotPointActor::AMapHotPointActor()
 #endif
 	
 	PrimaryActorTick.bCanEverTick = false;
-	if (!PoiInfo.HotPointId.IsValid())
-	{
-		PoiInfo.HotPointId = FGuid::NewGuid();
-	}
 }
 
 void AMapHotPointActor::FoundThisMapHotPoint(APawn* Pawn, bool Global)
 {
-	if (!Pawn)
+	if (GetNetMode() == NM_Client || !IsValid(Pawn) || Pawn->GetWorld() != GetWorld() || !PoiInfo.HotPointId.IsValid()) return;
+	auto* PC = Cast<APlayerController>(Pawn->GetController());
+	if (!PC) return;
+	const FString Level = HotPointLevelName.IsEmpty() ? UGameplayStatics::GetCurrentLevelName(this) : HotPointLevelName;
+	if (Global)
 	{
-		return;
+		if (auto* Component = GetWorld()->GetSubsystem<UMinimapSubsystem>()->GetMinimapGlobal())
+			Component->PoiStateList.AddPoi(Level, PoiInfo.HotPointId);
 	}
-
-	// TODO : POI : Hot point found feature.
-	// PlayerComp->FindHotPoint(HotPointLevelName, PoiInfo.HotPointId, Global);
+	else if (auto* Player = PC->GetComponentByClass<UMinimapPlayerComponent>())
+	{
+		Player->PersonalPoiStateList.AddPoi(Level, PoiInfo.HotPointId);
+	}
 }
 
 void AMapHotPointActor::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
+	if (!PoiInfo.HotPointId.IsValid()) PoiInfo.HotPointId = FGuid::NewGuid();
 	PoiInfo.Location = GetActorLocation();
 	
 #if WITH_EDITOR
@@ -74,6 +81,12 @@ void AMapHotPointActor::OnConstruction(const FTransform& Transform)
 }
 
 #if WITH_EDITOR
+void AMapHotPointActor::PostEditImport()
+{
+	Super::PostEditImport();
+	PoiInfo.HotPointId = FGuid::NewGuid();
+}
+
 void AMapHotPointActor::PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedEvent)
 {
 	Super::PostEditChangeChainProperty(PropertyChangedEvent);

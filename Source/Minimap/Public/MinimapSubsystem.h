@@ -9,6 +9,8 @@
 class AMapPinActor;
 class UMinimapGlobal;
 
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FMinimapPoiChanged, const APlayerController*, const FString&, FGuid);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapUserSettingsChangedEvent, UMinimapUserSettings*, MinimapUserSettings);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHotPointChangeEvent, const FString&, LevelName, const FGuid&, Guid);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMinimapGlobalReadyEvent, UMinimapGlobal*, MinimapGlobal);
@@ -23,6 +25,8 @@ class MINIMAP_API UMinimapSubsystem : public UWorldSubsystem
 	virtual void Deinitialize() override;
 
 public:
+	// Null viewer denotes a global discovery. Local widgets filter personal changes by controller.
+	FMinimapPoiChanged OnPoiChanged;
 #pragma region Delegate
 	UPROPERTY(BlueprintAssignable, Category = "MinimapSubsystem")
 	FMinimapUserSettingsChangedEvent OnMinimapUserSettingsChangedEvent;

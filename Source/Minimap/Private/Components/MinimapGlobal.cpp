@@ -3,6 +3,8 @@
 #include "Components/MinimapGlobal.h"
 
 #include "Minimap.h"
+#include "Components/MinimapPlayerComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "MinimapPinObject.h"
 #include "MinimapSubsystem.h"
 #include "NetRelevantObject.h"
@@ -71,60 +73,87 @@ void UMinimapGlobal::RemoveLocalMapPin(const FGuid Id)
 	}
 }
 
-void UMinimapGlobal::ChangeTempPinLocation_Implementation(AController* Controller, const FVector& Location)
+namespace
 {
-	if (const auto Found = TempMapPinMapping.Find(Controller))
+UMinimapPlayerComponent* GetRequestingPlayer(const UMinimapGlobal* Global, AController* Controller)
+{
+	auto* PC = Cast<APlayerController>(Controller);
+	if (!IsValid(PC) || PC->GetWorld() != Global->GetWorld() || !PC->IsLocalPlayerController()) return nullptr;
+	return PC->GetComponentByClass<UMinimapPlayerComponent>();
+}
+}
+
+void UMinimapGlobal::ChangeTempPinLocation(AController* Controller, const FVector& Location)
+{
+	if (!IsValid(Controller) || Controller->GetWorld() != GetWorld() || Location.ContainsNaN()) return;
+	if (!GetOwner()->HasAuthority())
 	{
-		if (const auto Ptr = *Found)
-		{
-			Ptr->SetActorLocation(Location);
-		}
+		if (auto* Player = GetRequestingPlayer(this, Controller)) Player->ServerMoveTempPin(Location);
+		return;
+	}
+	if (auto* Pin = TempMapPinMapping.FindRef(Controller); IsValid(Pin)) Pin->SetActorLocation(Location);
+}
+
+void UMinimapGlobal::RemoveTempPin(AController* Controller)
+{
+	if (!IsValid(Controller) || Controller->GetWorld() != GetWorld()) return;
+	if (!GetOwner()->HasAuthority())
+	{
+		if (auto* Player = GetRequestingPlayer(this, Controller)) Player->ServerRemoveTempPin();
+		return;
+	}
+	AMapPinActor* Pin = nullptr;
+	if (TempMapPinMapping.RemoveAndCopyValue(Controller, Pin) && IsValid(Pin)) Pin->Destroy();
+}
+
+void UMinimapGlobal::AddTempPin(AController* Controller, const FVector& Location, const FSlateBrush& Brush)
+{
+	if (!IsValid(Controller) || Controller->GetWorld() != GetWorld() || Location.ContainsNaN()) return;
+	if (!GetOwner()->HasAuthority())
+	{
+		if (auto* Player = GetRequestingPlayer(this, Controller)) Player->ServerPlaceTempPin(Location, Brush);
+		return;
+	}
+	if (auto* Existing = TempMapPinMapping.FindRef(Controller); IsValid(Existing))
+	{
+		Existing->SetActorLocation(Location);
+		Existing->PinSlateBrush = Brush;
+		if (auto* Object = Cast<UMinimapPinObject>(FindNetRelevantObject(Existing->Id)))
+			Object->ReplicatingData.Brush = Brush;
+		return;
+	}
+	const FTransform Transform(Location);
+	if (auto* Pin = GetWorld()->SpawnActorDeferred<AMapPinActor>(AMapPinActor::StaticClass(), Transform,
+		Controller, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn))
+	{
+		Pin->OwningController = Controller;
+		Pin->bCollision = true;
+		Pin->PinSlateBrush = Brush;
+		TempMapPinMapping.Add(Controller, Pin);
+		Pin->FinishSpawning(Transform);
 	}
 }
 
-void UMinimapGlobal::RemoveTempPin_Implementation(AController* Controller)
+void UMinimapGlobal::OnRegister()
 {
-	if (const auto Found = TempMapPinMapping.Find(Controller))
-	{
-		if (const auto Ptr = *Found)
-		{
-			Ptr->K2_DestroyActor();
-		}
-	}
-	
-	TempMapPinMapping.Remove(Controller);
+	Super::OnRegister();
+	PoiStateList.WorldContextObject = this;
 }
 
-void UMinimapGlobal::AddTempPin_Implementation(AController* Controller, const FVector& Location, const FSlateBrush& Brush)
+FMinimapWorldSaveData UMinimapGlobal::GetSaveData() const
 {
-	// If temp pin actor exist, we simply change location for the map pin actor.
-	if (const auto Found = TempMapPinMapping.Find(Controller))
-	{
-		if (const auto Ptr = *Found)
-		{
-			Ptr->SetActorLocation(Location);
-			return;
-		}
-	}
-	
-	FActorSpawnParameters spawnInfo;
-	spawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	if (const auto TempPin = GetWorld()->SpawnActorDeferred<AMapPinActor>(AMapPinActor::StaticClass(), FTransform(Location)))
-	{
-		TempPin->OwningController = Controller;
-		TempPin->bCollision = true;
-		TempPin->PinSlateBrush = Brush;
-		TempPin->SetOwner(GetOwner()->GetOwner());
-		TempPin->FinishSpawning(FTransform(Location));
-		TempPin->OnRep_OwningController();
-		TempMapPinMapping.Add(Controller, TempPin);
-	}
+	FMinimapWorldSaveData Data;
+	if (GetOwner() && GetOwner()->HasAuthority()) Data.DiscoveredPOIs = PoiStateList.PoiStateMap;
+	return Data;
+}
+
+void UMinimapGlobal::LoadGame(const FMinimapWorldSaveData& Data)
+{
+	if (GetOwner() && GetOwner()->HasAuthority()) PoiStateList.ReplaceWith(Data.DiscoveredPOIs);
 }
 
 void UMinimapGlobal::BeginPlay()
 {
-	PoiStateList.WorldContextObject = this;
-	
 	Super::BeginPlay();
 
 	// Broadcast this to make user easily to know the data source component is ready.

@@ -7,6 +7,7 @@ public class Minimap : ModuleRules
 	public Minimap(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+		SetupIrisSupport(Target);
 		
 		PublicDependencyModuleNames.AddRange(
 			new string[]

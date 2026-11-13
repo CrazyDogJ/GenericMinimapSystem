@@ -24,6 +24,16 @@ public:
 	/** Poi found record */
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Replicated, Category = "Minimap|POI")
 	FPoiStateList PoiStateList;
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Minimap|Save")
+	FMinimapWorldSaveData GetSaveData() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Minimap|Save")
+	void LoadGame(const FMinimapWorldSaveData& Data);
+
+	bool IsPoiVisible(const APlayerController* Viewer, const FString& Level, FGuid Id) const;
+	void GetFoundPoisFor(const APlayerController* Viewer, const FString& Level, TSet<FGuid>& Out) const;
+	void QueryPoisFor(const APlayerController* Viewer, UMinimapMapData* Map, const FVector& Center, float Radius, TSet<FGuid>& Out) const;
 	
 	UPROPERTY()
 	TMap<AController*, AMapPinActor*> TempMapPinMapping;
@@ -48,13 +58,13 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void RemoveLocalMapPin(const FGuid Id);
 	
-	UFUNCTION(BlueprintCallable, Server, Reliable)
+	UFUNCTION(BlueprintCallable)
 	void AddTempPin(AController* Controller, const FVector& Location, const FSlateBrush& Brush);
 	
-	UFUNCTION(BlueprintCallable, Server, Reliable)
+	UFUNCTION(BlueprintCallable)
 	void ChangeTempPinLocation(AController* Controller, const FVector& Location);
 	
-	UFUNCTION(BlueprintCallable, Server, Reliable)
+	UFUNCTION(BlueprintCallable)
 	void RemoveTempPin(AController* Controller);
 	
 public:
@@ -76,12 +86,14 @@ public:
 	virtual bool GetCategoryTag(const FGuid& Id, FGameplayTag& OutTag) const override;
 	virtual bool GetIsAlwaysOnMinimap(const FGuid& Id) const override;
 	virtual bool GetIsOnOverlay(const FGuid& Id) const override;
+	virtual void GetNameAndDescription(const FGuid& Id, FText& OutName, FText& OutDesc) const override;
 	virtual FMapPinChangeEvent* GetMapPinAddEvent() override;
 	virtual FMapPinChangeEvent* GetMapPinRemoveEvent() override;
 	// IMinimapWidgetInterface
 #pragma endregion IMinimapWidgetInterface
 	
 protected:
+	virtual void OnRegister() override;
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;

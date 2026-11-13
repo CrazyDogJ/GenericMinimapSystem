@@ -20,11 +20,7 @@ TMap<FString, TSoftObjectPtr<UMinimapMapData>> UMinimapBlueprintFunctionLibrary:
 
 TSoftObjectPtr<UMinimapMapData> UMinimapBlueprintFunctionLibrary::GetMinimapDataByName(const FString& LevelName)
 {
-    if (GetMinimapDatas().Find(LevelName))
-    {
-        return GetMinimapDatas().Find(LevelName)->Get();
-    }
-    return nullptr;
+    return GetDefault<UMinimapSettings>()->MapsInfos.FindRef(LevelName);
 }
 
 FHitResult UMinimapBlueprintFunctionLibrary::GetHitResultFromScreenPosition(const APlayerController* PlayerController, const FVector2D ScreenPosition)

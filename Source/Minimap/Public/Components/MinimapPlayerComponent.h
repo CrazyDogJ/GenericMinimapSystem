@@ -19,6 +19,25 @@ class MINIMAP_API UMinimapPlayerComponent : public UNetRelevantLocalComponent
 
 public:
 	UMinimapPlayerComponent();
+
+	UPROPERTY(BlueprintReadOnly, Replicated, Category="Minimap|POI")
+	FPoiStateList PersonalPoiStateList;
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Minimap|Save")
+	FMinimapPlayerSaveData GetSaveData() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Minimap|Save")
+	void LoadGame(const FMinimapPlayerSaveData& Data);
+
+	UFUNCTION(Server, Reliable)
+	void ServerPlaceTempPin(FVector Location, const FSlateBrush& Brush);
+	UFUNCTION(Server, Reliable)
+	void ServerMoveTempPin(FVector Location);
+	UFUNCTION(Server, Reliable)
+	void ServerRemoveTempPin();
+
+	virtual void OnRegister() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 public:
 	UFUNCTION()
@@ -80,4 +99,10 @@ public:
 
 	void UpdateNavPath(const float& DeltaTime);
 #pragma endregion Nav Query
+
+private:
+	void RestoreTempPin(UMinimapGlobal* Global);
+	UPROPERTY(Transient)
+	TMap<FString, FMinimapSavedTempPin> SavedTempPins;
+	bool bPendingPinRestore = false;
 };

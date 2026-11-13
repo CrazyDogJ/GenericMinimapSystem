@@ -12,6 +12,7 @@ class IMinimapWidgetInterface;
 class UOverlay;
 class UMapPinUserWidget;
 class UMinimapSubsystem;
+class UMinimapMapData;
 
 #define TYPE_MINIMAP 0
 #define TYPE_MAINMAP 1
@@ -26,7 +27,16 @@ protected:
 	FUserWidgetPool WidgetPool;
 
 	virtual void ReleaseSlateResources(bool bReleaseChildren) override;
+	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+	virtual UMinimapMapData* GetPoiMap() const;
+	virtual void ShowDiscoveredPoi(FGuid Id);
+	void RefreshDiscoveredPois();
+	TSet<FGuid> DiscoveredPois;
+private:
+	void OnPoiChanged(const APlayerController* Viewer, const FString& Level, FGuid Id);
+	UFUNCTION()
+	void OnPoiMapChanged(const UMinimapMapData* Map);
 	
 public:
 	UMinimapBaseUserWidget(const FObjectInitializer& ObjectInitializer);

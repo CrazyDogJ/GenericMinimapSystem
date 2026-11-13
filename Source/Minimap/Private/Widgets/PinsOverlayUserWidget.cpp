@@ -9,6 +9,12 @@
 #include "Widgets/MapPinUserWidget.h"
 #include "Widgets/MinimapWidgetInterface.h"
 
+void UPinsOverlayUserWidget::ShowDiscoveredPoi(FGuid Id)
+{
+	const auto* Interface = TryGetDataInterface();
+	if (Interface && Interface->GetIsOnOverlay(Id)) AddMapPin(Id);
+}
+
 void UPinsOverlayUserWidget::OnMapPinAddEvent(const FGuid& Guid)
 {
 	if (const auto Interface = TryGetDataInterface())

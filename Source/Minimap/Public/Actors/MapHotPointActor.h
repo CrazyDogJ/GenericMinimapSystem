@@ -36,6 +36,7 @@ public:
 
 	virtual void OnConstruction(const FTransform& Transform) override;
 #if WITH_EDITOR
+	virtual void PostEditImport() override;
 	virtual void PostEditChangeChainProperty(struct FPropertyChangedChainEvent& PropertyChangedEvent) override;
 #endif
 };

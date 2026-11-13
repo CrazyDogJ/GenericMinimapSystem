@@ -1,6 +1,10 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "MinimapPinObject.h"
+#include "MinimapMapData.h"
+#include "Components/MinimapPlayerComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/GameInstance.h"
 #include "MinimapSubsystem.h"
 #include "Components/MinimapGlobal.h"
 #include "Widgets/MinimapBaseUserWidget.h"
@@ -41,16 +45,50 @@ bool UMinimapGlobal::GetRegisteredMapPins(TSet<FGuid>& OutGuid) const
 	return true;
 }
 
+bool UMinimapGlobal::IsPoiVisible(const APlayerController* Viewer, const FString& Level, FGuid Id) const
+{
+	if (PoiStateList.IsPoiFound(Level, Id)) return true;
+	if (!Viewer || Viewer->GetWorld() != GetWorld()) return false;
+	const auto* Player = Viewer->GetComponentByClass<UMinimapPlayerComponent>();
+	return Player && Player->PersonalPoiStateList.IsPoiFound(Level, Id);
+}
+
+void UMinimapGlobal::GetFoundPoisFor(const APlayerController* Viewer, const FString& Level, TSet<FGuid>& Out) const
+{
+	if (const auto* Shared = PoiStateList.PoiStateMap.Find(Level)) Out.Append(Shared->Indices);
+	if (Viewer && Viewer->GetWorld() == GetWorld())
+	{
+		if (const auto* Player = Viewer->GetComponentByClass<UMinimapPlayerComponent>())
+		{
+			if (const auto* Personal = Player->PersonalPoiStateList.PoiStateMap.Find(Level)) Out.Append(Personal->Indices);
+		}
+	}
+}
+
+void UMinimapGlobal::QueryPoisFor(const APlayerController* Viewer, UMinimapMapData* Map, const FVector& Center,
+	float Radius, TSet<FGuid>& Out) const
+{
+	if (!Map) return;
+	const FString Level = Map->LevelName.IsEmpty() ? UGameplayStatics::GetCurrentLevelName(this) : Map->LevelName;
+	for (const FGuid& Id : Map->QueryRange(Center, Radius))
+		if (IsPoiVisible(Viewer, Level, Id)) Out.Add(Id);
+}
+
 bool UMinimapGlobal::GetFoundHotPoints(TSet<FGuid>& OutGuid) const
 {
-	// TODO : POI : Hot point not do it now.
-	return IMinimapWidgetInterface::GetFoundHotPoints(OutGuid);
+	const auto* Instance = GetWorld()->GetGameInstance();
+	auto* Map = GetWorld()->GetSubsystem<UMinimapSubsystem>()->GetCurrentMinimapMapData();
+	GetFoundPoisFor(Instance ? Instance->GetFirstLocalPlayerController() : nullptr,
+		Map && !Map->LevelName.IsEmpty() ? Map->LevelName : UGameplayStatics::GetCurrentLevelName(this), OutGuid);
+	return true;
 }
 
 bool UMinimapGlobal::QueryHotPoints(const FVector& Location, const float& Radius, TSet<FGuid>& OutGuid) const
 {
-	// TODO : POI : Hot point not do it now.
-	return IMinimapWidgetInterface::QueryHotPoints(Location, Radius, OutGuid);
+	const auto* Instance = GetWorld()->GetGameInstance();
+	auto* Map = GetWorld()->GetSubsystem<UMinimapSubsystem>()->GetCurrentMinimapMapData();
+	QueryPoisFor(Instance ? Instance->GetFirstLocalPlayerController() : nullptr, Map, Location, Radius, OutGuid);
+	return Map != nullptr;
 }
 
 bool UMinimapGlobal::GetMapPinClass(const FGuid& Id, const uint8 Type, TSubclassOf<UMapPinUserWidget>& OutClass) const
@@ -261,6 +299,9 @@ bool UMinimapGlobal::GetIsAlwaysOnMinimap(const FGuid& Id) const
 		return MinimapData->bAlwaysOnMinimap;
 	}
 	
+	FPoiInfo Info;
+	if (auto* Sub = GetWorld()->GetSubsystem<UMinimapSubsystem>(); Sub && Sub->GetHotPointInfoFromGuid(Id, Info))
+		return Info.bAlwaysOnMinimap;
 	return IMinimapWidgetInterface::GetIsAlwaysOnMinimap(Id);
 }
 
@@ -279,7 +320,38 @@ bool UMinimapGlobal::GetIsOnOverlay(const FGuid& Id) const
 		return MinimapData->bAddToOverlay;
 	}
 	
+	FPoiInfo Info;
+	if (auto* Sub = GetWorld()->GetSubsystem<UMinimapSubsystem>(); Sub && Sub->GetHotPointInfoFromGuid(Id, Info))
+		return Info.bAddToOverlay;
 	return IMinimapWidgetInterface::GetIsOnOverlay(Id);
+}
+
+void UMinimapGlobal::GetNameAndDescription(const FGuid& Id, FText& OutName, FText& OutDesc) const
+{
+	if (const auto Found = LocalNetRelevantObjects.Find(Id))
+	{
+		const auto Object = *Found;
+		if (const auto MapPinObject = Cast<UMinimapPinObject>(Object))
+		{
+			OutName = MapPinObject->ReplicatingData.DisplayName;
+			OutDesc = MapPinObject->ReplicatingData.DisplayDescription;
+		}
+	}
+	else if (const auto MinimapData = LocalMapPins.Find(Id))
+	{
+		OutName = MinimapData->DisplayName;
+		OutDesc = MinimapData->DisplayDescription;
+	}
+	
+	else
+	{
+		FPoiInfo Info;
+		if (auto* Sub = GetWorld()->GetSubsystem<UMinimapSubsystem>(); Sub && Sub->GetHotPointInfoFromGuid(Id, Info))
+		{
+			OutName = Info.DisplayName;
+			OutDesc = Info.DisplayDescription;
+		}
+	}
 }
 
 FMapPinChangeEvent* UMinimapGlobal::GetMapPinAddEvent()

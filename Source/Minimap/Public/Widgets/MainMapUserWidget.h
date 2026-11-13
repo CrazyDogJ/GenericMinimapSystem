@@ -118,6 +118,7 @@ public:
 	
 	UFUNCTION(BlueprintPure, Category = "Minimap")
 	UMinimapMapData* GetCurrentGlobalMapData() const;
+	virtual UMinimapMapData* GetPoiMap() const override { return GetCurrentGlobalMapData(); }
 	
 	UFUNCTION(BlueprintPure, Category = "Minimap")
 	FVector GetCaptureCenter() const;

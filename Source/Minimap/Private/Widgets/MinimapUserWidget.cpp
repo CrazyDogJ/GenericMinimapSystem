@@ -4,6 +4,7 @@
 #include "Widgets/MinimapUserWidget.h"
 
 #include "MinimapMapData.h"
+#include "Components/MinimapGlobal.h"
 #include "MinimapSubsystem.h"
 #include "Widgets/MapPinUserWidget.h"
 #include "Components/Image.h"
@@ -276,6 +277,21 @@ void UMinimapUserWidget::UpdateMinimapImageParameters() const
 	}
 }
 
+TArray<UMaterialInstanceDynamic*> UMinimapUserWidget::GetTileMaterials(const TArray<UUserWidget*>& Entries, UUserWidget* LocalTile)
+{
+	TArray<UMaterialInstanceDynamic*> Materials;
+	auto AddMaterial = [&Materials](UUserWidget* Tile)
+	{
+		if (!IsValid(Tile)) return;
+		if (const auto* Image = Cast<UImage>(Tile->GetWidgetFromName(TEXT("MapImage"))))
+			if (auto* Material = Cast<UMaterialInstanceDynamic>(Image->GetBrush().GetResourceObject()))
+				Materials.AddUnique(Material);
+	};
+	for (UUserWidget* Entry : Entries) AddMaterial(Entry);
+	AddMaterial(LocalTile);
+	return Materials;
+}
+
 void UMinimapUserWidget::UpdateTilesParameters() const
 {
 	TArray<UMaterialInstanceDynamic*> Tiles;
@@ -307,19 +323,21 @@ void UMinimapUserWidget::UpdateMarkersVisibilities()
 	const auto Interface = TryGetDataInterface();
 	if (Interface)
 	{
-		if (GetLocalPlayerActor())
+		if (const auto* Actor = GetLocalPlayerActor())
 		{
-			TSet<FGuid> OutGuid;
-			Interface->QueryHotPoints(GetLocalPlayerActor()->GetActorLocation(), InterpRadius, OutGuid);
-			for (const auto Id : OutGuid)
-			{
-				if (IsInRadius(Id))
-				{
-					AddMapPin(Id);
-				}
-			}
+			TSet<FGuid> Nearby;
+			if (const auto* Global = Cast<UMinimapGlobal>(Interface))
+				Global->QueryPoisFor(GetOwningPlayer(), GetPoiMap(), Actor->GetActorLocation(), InterpRadius, Nearby);
+			else Interface->QueryHotPoints(Actor->GetActorLocation(), InterpRadius, Nearby);
+			for (FGuid Id : Nearby) AddMapPin(Id);
+
+			TArray<FGuid> Outside;
+			for (const auto& Pair : Markers)
+				if (DiscoveredPois.Contains(Pair.Key) && !Nearby.Contains(Pair.Key) && !Interface->GetIsAlwaysOnMinimap(Pair.Key))
+					Outside.Add(Pair.Key);
+			for (FGuid Id : Outside) RemoveMapPin(Id);
 		}
-		
+
 		// Check should add map pin.
 		TSet<FGuid> Pins;
 		if (Interface->GetRegisteredMapPins(Pins))

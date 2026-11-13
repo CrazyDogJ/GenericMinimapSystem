@@ -159,18 +159,24 @@ public:
 
 	bool IsValid() const
 	{
-		return LevelIndex >= 0 && PoiIndex.IsValid();
+		return (!LevelName.IsEmpty() || LevelIndex >= 0) && PoiIndex.IsValid();
 	}
 	
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
 	int LevelIndex = -1;
+
+	// Stored on the wire by name so map settings can be reordered between runs.
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
+	FString LevelName;
+
+	FString ResolveLevelName() const;
 	
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
 	FGuid PoiIndex;
 	
 	bool operator==(const FPoiStateEntry& Other) const
 	{
-		return LevelIndex == Other.LevelIndex && PoiIndex == Other.PoiIndex;
+		return PoiIndex == Other.PoiIndex && ResolveLevelName() == Other.ResolveLevelName();
 	}
 };
 
@@ -203,6 +209,7 @@ public:
 	static FString GetLevelName(int32 LevelIndex);
 	void AddPoi(const FString& LevelName, const FGuid& PoiIndex);
 	void RemovePoi(const FString& LevelName, const FGuid& PoiIndex);
+	void ReplaceWith(const TMap<FString, FMinimapIndices>& Mapping);
 	void TryRemoveEmpty(const FString& LevelName);
 	bool IsPoiFound(const FString& LevelName, const FGuid& PoiIndex) const;
 
@@ -214,6 +221,47 @@ public:
 	{
 		return FFastArraySerializer::FastArrayDeltaSerialize<FPoiStateEntry, FPoiStateList>(PoiStateEntries, DeltaParams, *this);
 	}
+};
+
+USTRUCT(BlueprintType)
+struct FMinimapWorldSaveData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame)
+	TMap<FString, FMinimapIndices> DiscoveredPOIs;
+};
+
+USTRUCT(BlueprintType)
+struct MINIMAP_API FMinimapSavedTempPin
+{
+	GENERATED_BODY()
+
+	bool Serialize(FArchive& Ar);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame)
+	FVector Location = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame)
+	FSlateBrush Brush;
+};
+
+template<> struct TStructOpsTypeTraits<FMinimapSavedTempPin> : TStructOpsTypeTraitsBase2<FMinimapSavedTempPin>
+{
+	enum { WithSerializer = true };
+};
+
+USTRUCT(BlueprintType)
+struct FMinimapPlayerSaveData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame)
+	TMap<FString, FMinimapIndices> DiscoveredPOIs;
+
+	// At most one temporary pin on each map for this player.
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, SaveGame)
+	TMap<FString, FMinimapSavedTempPin> TempPinsByLevel;
 };
 
 template<> struct TStructOpsTypeTraits<FPoiStateList> : public TStructOpsTypeTraitsBase2<FPoiStateList>

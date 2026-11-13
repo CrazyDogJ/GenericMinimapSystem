@@ -18,9 +18,17 @@ FSlateBrush UMapPinUserWidget::GetMapPinBrush() const
 	return Brush;
 }
 
+void UMapPinUserWidget::GetNameAndDescription(FText& OutName, FText& OutDescription) const
+{
+	if (const auto Interface = TryGetInterface())
+	{
+		Interface->GetNameAndDescription(Guid, OutName, OutDescription);
+	}
+}
+
 FVector UMapPinUserWidget::GetMapPinLocation() const
 {
-	FVector Loc;
+	FVector Loc = FVector::ZeroVector;
 	
 	if (const auto Interface = TryGetInterface())
 	{

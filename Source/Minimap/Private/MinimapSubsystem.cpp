@@ -41,6 +41,7 @@ UMinimapMapData* UMinimapSubsystem::GetCurrentMinimapMapData()
     UMinimapSettings* Settings = GetMutableDefault<UMinimapSettings>();
     if (auto Value = Settings->MapsInfos.Find(UGameplayStatics::GetCurrentLevelName(GetWorld())))
     {
+        if (CurrentMinimapMapData && Value->Get() == CurrentMinimapMapData) return CurrentMinimapMapData;
         CurrentMinimapMapData = Value->LoadSynchronous();
         if (!CurrentMinimapMapData)
         {
@@ -60,7 +61,15 @@ UMinimapMapData* UMinimapSubsystem::GetCurrentMinimapMapData()
 
 bool UMinimapSubsystem::GetHotPointInfoFromGuid(FGuid Guid, FPoiInfo& OutInfo)
 {
-    if (CurrentMinimapMapData && Guid.IsValid())
+    if (LocalMinimapMapData && Guid.IsValid())
+    {
+        if (const auto* Info = LocalMinimapMapData->HotPointInfos.Find(Guid))
+        {
+            OutInfo = *Info;
+            return true;
+        }
+    }
+    if (Guid.IsValid() && GetCurrentMinimapMapData())
     {
         if (const auto Ptr = CurrentMinimapMapData->HotPointInfos.Find(Guid))
         {

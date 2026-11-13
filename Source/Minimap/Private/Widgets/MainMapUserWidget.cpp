@@ -64,10 +64,7 @@ void UMainMapUserWidget::InitializeMapPins()
 	if (const auto Interface = TryGetDataInterface())
 	{
 		TSet<FGuid> TotalPins;
-		TSet<FGuid> HotPoints;
 		Interface->GetRegisteredMapPins(TotalPins);
-		Interface->GetFoundHotPoints(HotPoints);
-		TotalPins.Append(HotPoints);
 		
 		for (const auto Itr : TotalPins)
 		{

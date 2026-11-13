@@ -4,6 +4,8 @@
 
 #include "MinimapBlueprintFunctionLibrary.h"
 #include "MinimapSubsystem.h"
+#include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 #include "MinimapZoneGraphAStar.h"
 #include "Actors/MapPinActor.h"
 #include "Blueprint/UserWidget.h"
@@ -19,6 +21,7 @@ UMinimapPlayerComponent::UMinimapPlayerComponent()
 
 void UMinimapPlayerComponent::OnMinimapGlobalReadyEvent(UMinimapGlobal* MinimapGlobal)
 {
+	if (bPendingPinRestore) RestoreTempPin(MinimapGlobal);
 	if (const auto MinimapWidget = GetOrCreateMinimapWidget(MinimapGlobal))
 	{
 		MinimapWidget->AddToViewport();
@@ -40,6 +43,7 @@ void UMinimapPlayerComponent::BeginPlay()
 	{
 		if (const auto Global = Sub->GetMinimapGlobal())
 		{
+			if (bPendingPinRestore) RestoreTempPin(Global);
 			if (const auto MinimapWidget = GetOrCreateMinimapWidget(Global))
 			{
 				MinimapWidget->AddToViewport();
@@ -196,4 +200,75 @@ void UMinimapPlayerComponent::UpdateNavPath(const float& DeltaTime)
 				&& UMinimapZoneGraphAStarLibrary::GetPathPoints(this, OutPath, NavQueryOutPathPoints);
 		}
 	}
+}
+
+void UMinimapPlayerComponent::OnRegister()
+{
+	Super::OnRegister();
+	PersonalPoiStateList.WorldContextObject = this;
+}
+
+void UMinimapPlayerComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME_CONDITION(ThisClass, PersonalPoiStateList, COND_OwnerOnly);
+}
+
+void UMinimapPlayerComponent::ServerPlaceTempPin_Implementation(FVector Location, const FSlateBrush& Brush)
+{
+	if (auto* Global = GetWorld()->GetSubsystem<UMinimapSubsystem>()->GetMinimapGlobal())
+		Global->AddTempPin(Cast<APlayerController>(GetOwner()), Location, Brush);
+}
+
+void UMinimapPlayerComponent::ServerMoveTempPin_Implementation(FVector Location)
+{
+	if (auto* Global = GetWorld()->GetSubsystem<UMinimapSubsystem>()->GetMinimapGlobal())
+		Global->ChangeTempPinLocation(Cast<APlayerController>(GetOwner()), Location);
+}
+
+void UMinimapPlayerComponent::ServerRemoveTempPin_Implementation()
+{
+	if (auto* Global = GetWorld()->GetSubsystem<UMinimapSubsystem>()->GetMinimapGlobal())
+		Global->RemoveTempPin(Cast<APlayerController>(GetOwner()));
+}
+
+FMinimapPlayerSaveData UMinimapPlayerComponent::GetSaveData() const
+{
+	FMinimapPlayerSaveData Data;
+	auto* PC = Cast<APlayerController>(GetOwner());
+	if (!PC || !PC->HasAuthority()) return Data;
+	Data.DiscoveredPOIs = PersonalPoiStateList.PoiStateMap;
+	Data.TempPinsByLevel = SavedTempPins;
+	const auto* Global = GetWorld()->GetSubsystem<UMinimapSubsystem>()->GetMinimapGlobal();
+	if (Global && !bPendingPinRestore)
+	{
+		const FString Level = UGameplayStatics::GetCurrentLevelName(this);
+		if (const auto* Pin = Global->TempMapPinMapping.FindRef(PC); IsValid(Pin))
+		{
+			auto& Saved = Data.TempPinsByLevel.FindOrAdd(Level);
+			Saved.Location = Pin->GetActorLocation();
+			Saved.Brush = Pin->PinSlateBrush;
+		}
+		else Data.TempPinsByLevel.Remove(Level);
+	}
+	return Data;
+}
+
+void UMinimapPlayerComponent::LoadGame(const FMinimapPlayerSaveData& Data)
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority()) return;
+	PersonalPoiStateList.ReplaceWith(Data.DiscoveredPOIs);
+	SavedTempPins = Data.TempPinsByLevel;
+	bPendingPinRestore = true;
+	if (auto* Global = GetWorld()->GetSubsystem<UMinimapSubsystem>()->GetMinimapGlobal()) RestoreTempPin(Global);
+}
+
+void UMinimapPlayerComponent::RestoreTempPin(UMinimapGlobal* Global)
+{
+	if (!Global || !GetOwner()->HasAuthority()) return;
+	auto* PC = CastChecked<APlayerController>(GetOwner());
+	bPendingPinRestore = false;
+	if (const auto* Pin = SavedTempPins.Find(UGameplayStatics::GetCurrentLevelName(this)))
+		Global->AddTempPin(PC, Pin->Location, Pin->Brush);
+	else Global->RemoveTempPin(PC);
 }

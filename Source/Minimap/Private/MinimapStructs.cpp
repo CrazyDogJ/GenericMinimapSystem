@@ -3,25 +3,64 @@
 #include "MinimapStructs.h"
 
 #include "MinimapMapData.h"
+#include "Engine/GameInstance.h"
 #include "MinimapSettings.h"
 #include "MinimapSubsystem.h"
+#include "Components/MinimapPlayerComponent.h"
+#include "GameFramework/PlayerController.h"
+#include "Serialization/ArchiveProxy.h"
+
+bool FMinimapSavedTempPin::Serialize(FArchive& Ar)
+{
+	if (!Ar.IsSaveGame()) return false;
+	// All fields in this save record are persistent, including Slate's nested brush fields.
+	struct FPinArchive : FArchiveProxy
+	{
+		explicit FPinArchive(FArchive& Inner) : FArchiveProxy(Inner) { ArIsSaveGame = false; }
+	} PinArchive(Ar);
+	StaticStruct()->SerializeTaggedProperties(PinArchive, reinterpret_cast<uint8*>(this), StaticStruct(), nullptr);
+	return true;
+}
+
+namespace
+{
+void NotifyPoiChange(FPoiStateList& List, const FString& Level, FGuid Id, bool bAdded)
+{
+	auto* Sub = List.GetSubsystem();
+	if (!Sub) return;
+	const auto* Player = Cast<UMinimapPlayerComponent>(List.WorldContextObject);
+	const auto* PC = Player ? Cast<APlayerController>(Player->GetOwner()) : nullptr;
+	if (Player && (!PC || !PC->IsLocalPlayerController())) return;
+	Sub->OnPoiChanged.Broadcast(PC, Level, Id);
+
+	// The original Blueprint events describe the first local player's combined discoveries.
+	const auto* Instance = List.GetWorld()->GetGameInstance();
+	auto* Viewer = Instance ? Instance->GetFirstLocalPlayerController() : nullptr;
+	if (PC && Viewer != PC) return;
+	const auto* Global = Sub->GetMinimapGlobal();
+	const auto* Local = Viewer ? Viewer->GetComponentByClass<UMinimapPlayerComponent>() : nullptr;
+	const FPoiStateList* Other = Player ? (Global ? &Global->PoiStateList : nullptr) :
+		(Local ? &Local->PersonalPoiStateList : nullptr);
+	if (Other && Other->IsPoiFound(Level, Id)) return;
+	if (bAdded) Sub->OnHotPointFoundEvent.Broadcast(Level, Id);
+	else Sub->OnHotPointRemoveEvent.Broadcast(Level, Id);
+}
+}
 
 #pragma region FPoiStateEntry
 FPoiStateEntry::FPoiStateEntry(const FString& InLevelName, const FGuid InPoiIndex)
+: LevelName(InLevelName), PoiIndex(InPoiIndex)
 {
-	const auto DefaultMinimapSettings = GetDefault<UMinimapSettings>();
-	TArray<FString> Array;
-	DefaultMinimapSettings->MapsInfos.GenerateKeyArray(Array);
-	LevelIndex = Array.Find(InLevelName);
-	PoiIndex = InPoiIndex;
 }
 
 FPoiStateEntry::FPoiStateEntry(const UMinimapMapData* MapData, const FGuid InPoiIndex)
+	: FPoiStateEntry(MapData ? MapData->LevelName : FString(), InPoiIndex)
 {
-	if (MapData)
-	{
-		FPoiStateEntry(MapData->LevelName, InPoiIndex);
-	}
+}
+
+FString FPoiStateEntry::ResolveLevelName() const
+{
+	return LevelName.IsEmpty() ? FPoiStateList::GetLevelName(LevelIndex) : LevelName;
 }
 #pragma endregion FPoiStateEntry
 #pragma region FPoiStateList
@@ -89,31 +128,23 @@ FString FPoiStateList::GetLevelName(int32 LevelIndex)
 
 void FPoiStateList::AddPoi(const FString& LevelName, const FGuid& PoiIndex)
 {
-	if (LevelName.IsEmpty())
-	{
-		return;
-	}
+	if (LevelName.IsEmpty() || !PoiIndex.IsValid() || !PoiStateMap.FindOrAdd(LevelName).Add(PoiIndex)) return;
+	const int32 Index = PoiStateEntries.Emplace(LevelName, PoiIndex);
+	MarkItemDirty(PoiStateEntries[Index]);
+	NotifyPoiChange(*this, LevelName, PoiIndex, true);
+}
 
-	if (!PoiStateMap.Find(LevelName))
+void FPoiStateList::ReplaceWith(const TMap<FString, FMinimapIndices>& Mapping)
+{
+	const auto Previous = PoiStateMap;
+	for (const auto& Pair : Previous)
 	{
-		PoiStateMap.Add(LevelName);
+		const auto* Keep = Mapping.Find(Pair.Key);
+		for (const FGuid& Id : Pair.Value.Indices)
+			if (!Keep || !Keep->Find(Id)) RemovePoi(Pair.Key, Id);
 	}
-	
-	if (const auto Found = PoiStateMap.Find(LevelName))
-	{
-		if (Found->Add(PoiIndex))
-		{
-			auto NewEntry = FPoiStateEntry(LevelName, PoiIndex);
-			// 修复：标记数组中的实际元素，使复制状态跟随元素生命周期。
-			const int32 Index = PoiStateEntries.Add(NewEntry);
-			MarkItemDirty(PoiStateEntries[Index]);
-
-			if (GetSubsystem())
-			{
-				GetSubsystem()->OnHotPointFoundEvent.Broadcast(LevelName, PoiIndex);
-			}
-		}
-	}
+	for (const auto& Pair : Mapping)
+		for (const FGuid& Id : Pair.Value.Indices) AddPoi(Pair.Key, Id);
 }
 
 void FPoiStateList::RemovePoi(const FString& LevelName, const FGuid& PoiIndex)
@@ -137,7 +168,7 @@ void FPoiStateList::RemovePoi(const FString& LevelName, const FGuid& PoiIndex)
 		// Remove empty level category.
 		TryRemoveEmpty(LevelName);
 		// 修复：事件可修改 PoiStateMap，完成删除后再广播。
-		if (auto* Sub = GetSubsystem()) Sub->OnHotPointRemoveEvent.Broadcast(LevelName, PoiIndex);
+		NotifyPoiChange(*this, LevelName, PoiIndex, false);
 	}
 }
 
@@ -167,53 +198,27 @@ bool FPoiStateList::IsPoiFound(const FString& LevelName, const FGuid& PoiIndex) 
 
 void FPoiStateList::PreReplicatedRemove(const TArrayView<int32>& RemovedIndices, int32 FinalSize)
 {
-	for (const auto Index : RemovedIndices)
+	for (const int32 Index : RemovedIndices)
 	{
 		const auto Entry = PoiStateEntries[Index];
-		const auto LevelName = GetLevelName(Entry.LevelIndex);
-		
-		if (!PoiStateMap.Find(LevelName))
+		const FString Level = Entry.ResolveLevelName();
+		auto* Found = PoiStateMap.Find(Level);
+		if (Found && Found->Remove(Entry.PoiIndex))
 		{
-			continue;
-		}
-		
-		if (const auto Found = PoiStateMap.Find(LevelName))
-		{
-			if (GetSubsystem())
-			{
-				GetSubsystem()->OnHotPointRemoveEvent.Broadcast(LevelName, Entry.PoiIndex);
-			}
-			
-			Found->Remove(Entry.PoiIndex);
-			
-			// Remove empty level category.
-			TryRemoveEmpty(LevelName);
+			TryRemoveEmpty(Level);
+			NotifyPoiChange(*this, Level, Entry.PoiIndex, false);
 		}
 	}
 }
 
 void FPoiStateList::PostReplicatedAdd(const TArrayView<int32>& AddedIndices, int32 FinalSize)
 {
-	for (const auto Index : AddedIndices)
+	for (const int32 Index : AddedIndices)
 	{
 		const auto Entry = PoiStateEntries[Index];
-		const auto LevelName = GetLevelName(Entry.LevelIndex);
-		
-		if (!PoiStateMap.Find(LevelName))
-		{
-			PoiStateMap.Add(LevelName);
-		}
-		
-		if (const auto Found = PoiStateMap.Find(LevelName))
-		{
-			if (Found->Add(Entry.PoiIndex))
-			{
-				if (GetSubsystem())
-				{
-					GetSubsystem()->OnHotPointFoundEvent.Broadcast(LevelName, Entry.PoiIndex);
-				}
-			}
-		}
+		const FString Level = Entry.ResolveLevelName();
+		if (!Level.IsEmpty() && Entry.PoiIndex.IsValid() && PoiStateMap.FindOrAdd(Level).Add(Entry.PoiIndex))
+			NotifyPoiChange(*this, Level, Entry.PoiIndex, true);
 	}
 }
 #pragma endregion FPoiStateList
@@ -225,7 +230,7 @@ TMap<FString, FMinimapIndices> UMinimapFastArrayLibrary::GetPoiMapping(const FPo
 
 void UMinimapFastArrayLibrary::LoadPoi(FPoiStateList& List, const TMap<FString, FMinimapIndices>& InitMapping)
 {
-	List = FPoiStateList(InitMapping);
+	List.ReplaceWith(InitMapping);
 }
 
 void UMinimapFastArrayLibrary::AddPoi(FPoiStateList& List, const FString& LevelName, const FGuid& PoiIndex)
